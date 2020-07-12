@@ -20,6 +20,7 @@ def task_timing_simulation(run_q, cpus, task_set, prio_set):
     print_cpu_status("cpu status after initialize: ", cpus)
     print_task_status("task status after initialize", task_set)
     while curr_t < 1:
+        print("currunt system time", curr_t)
         next_off = find_min_event_time(run_q, cpus, task_set, prio_set)
         update_system_status(curr_t, next_off, run_q, cpus, task_set)
         curr_t = curr_t + next_off
@@ -35,14 +36,13 @@ def insert_task_in_queue(queue, prio_set, name):
 
 def update_task_status(task, curr_time):
     task.stt = 'run'
-    curr_time = task.art
-    task.art = task.art + task.prd
+    task.art = curr_time
     return task
 
-def execute_task(cpu, queue, prio_set, curr_time):
+def execute_task(tasks, cpu, queue, prio_set, curr_time):
     next_task_name = queue.pop(0)
     cpu = next_task_name
-    task_set[next_task_name] = update_task_status(task_set[next_task_name], curr_time)
+    tasks[next_task_name] = update_task_status(task_set[next_task_name], curr_time)
     return cpu
 
 def initialize_system(queue, cpus, tasks, prio_set, curr_time):
@@ -54,7 +54,8 @@ def initialize_system(queue, cpus, tasks, prio_set, curr_time):
     for attr in tasks.values():
         insert_task_in_queue(queue[affi], prio_set, attr.name)
     #print(queue)
-    if queue[affi] : cpus[affi] = execute_task(cpus[affi], queue[affi], prio_set, curr_time)
+    if queue[affi] : cpus[affi] = execute_task(tasks, cpus[affi], queue[affi], prio_set, curr_time)
+    else : print("There's no ready task in run queue")
     print("init END")
 
 def print_cpu_status(comment, cpus):
@@ -71,17 +72,19 @@ def print_task_status(comment, task_set):
 
 def find_min_event_time(queue, cpus, tasks, prio_set):
     affi = 0 #USE ONLY 1 CPU
-    #CASE 1: preemption
-    #Priority of running task is lower than minimum priority of ready tasks.
-    print(prio_set[cpus[affi]])
-    next_task = queue[affi].pop(0)
-    print(prio_set[next_task])
-    if prio_set[cpus[affi]] < prio_set[next_task]:
-        print("preemption!")
-    #Arrival time of the ready task is lower than finish time of running task.
-    ##YOU NEED THINK ABOUT TIMING PROBLEM IN TWO TASKS (LIKE USING ABSOULTE TIME OR RELATIVE TIME.. OR RELATION BETWEEN ART, RTD..)
-    
-    #CASE 2: termination
+    next_off = 0
+    run_task = cpus[affi]
+    run_task_prio = prio_set[cpus[affi]]
+    ready_task_prio = prio_set[queue[affi][0]]
+   
+    if run_task_prio <= ready_task_prio:
+        print("not preemption!")
+        next_off = task_set[run_task].ext
+        print("next_off: ",next_off)
+        return next_off
+    #else:
+        
+
     print("min")
     return 1
 
