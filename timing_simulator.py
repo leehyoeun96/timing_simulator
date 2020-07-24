@@ -49,7 +49,7 @@ def find_min_event_time(current_t, affi, tasks, priorities, cpus, queue):
     
     return min_next_evt
 
-def update_system_status(curr_t, next_evt, next_task, affi, tasks, priorities, cpus, queue):
+def update_system_status(curr_t, next_evt, next_task, response_list, affi, tasks, priorities, cpus, queue):
     next_off = next_evt - curr_t
     run_task = cpus[affi]
 
@@ -66,14 +66,14 @@ def update_system_status(curr_t, next_evt, next_task, affi, tasks, priorities, c
         tasks[run_task].ret = tasks[run_task].ext - next_off
     else:
         #print("terminate normally")
-        calculate_response_time(run_task, tasks)
+        calculate_response_time(run_task, tasks, response_list)
         tasks[run_task].ret = tasks[run_task].ext
         tasks[run_task].cnt = tasks[run_task].cnt + 1
     util.insert_task_in_queue(run_task, affi, tasks, queue)
     next_task = queue[affi].pop(queue[affi].index(next_task))
     util.execute_task(next_task, next_evt, affi, tasks, cpus)
 
-def calculate_response_time(task, tasks):
+def calculate_response_time(task, tasks, response_list):
     print("*******************************")
     print("task name: ",tasks[task].name)
     arrival_time = tasks[task].art
@@ -85,3 +85,4 @@ def calculate_response_time(task, tasks):
     response_time = arrival_time - release_time + remaining_excution_time
     print("response time", response_time)
     print("*******************************")
+    response_list.append(response_time)
