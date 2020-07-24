@@ -1,62 +1,59 @@
 from recordtype import recordtype
 
 ncpus = 1
-cpus = ['task_0' for x in range(ncpus)]
+cpus = [0 for x in range(ncpus)]
 run_q = [list() for x in range(ncpus)]
 
-task_attr = recordtype("task_attr", 'name, ext, art, prd, off, rtd, stt')
+task_attr = recordtype("task_attr", 'name, ext, ret, art, prd, cnt, off, rtd, stt')
+'''
+ext = excution time
+ret = remaining excution time
+art = arrival time
+prd = period
+cnt = period count
+off = offset
+rtd = response time distribution
+stt = status
+'''
 
 prio_set = dict()
 task_set = {
-    'task_A': task_attr(name='task_A',   ext=5,  art=0,  prd=100, off=0,  rtd=0, stt='ready'),
-    'task_B': task_attr(name='task_B',   ext=5,  art=0,  prd=25,  off=0,  rtd=0, stt='ready'),
-    'task_C': task_attr(name='task_C',   ext=5,  art=0,  prd=10,  off=0,  rtd=0, stt='ready')
+    'task_A': task_attr(name='task_A', ext=5, ret=0, art=0, prd=100, cnt=0, off=5, rtd=0, stt='ready'),
+    'task_B': task_attr(name='task_B', ext=5, ret=0, art=0, prd=25,  cnt=0, off=0, rtd=0, stt='ready'),
+    'task_C': task_attr(name='task_C', ext=5, ret=0, art=0, prd=10,  cnt=0, off=2, rtd=0, stt='ready')
 }
 
-def task_timing_simulation(run_q, cpus, task_set, prio_set):
-    curr_t = 0
-    next_off = 0
-    initialize_system(run_q, cpus, task_set, prio_set, curr_t)
-    print_cpu_status("cpu status after initialize: ", cpus)
-    print_task_status("task status after initialize", task_set)
-    while curr_t < 1:
-        print("currunt system time", curr_t)
-        next_off = find_min_event_time(run_q, cpus, task_set, prio_set)
-        update_system_status(curr_t, next_off, run_q, cpus, task_set)
-        curr_t = curr_t + next_off
-
 def initialize_tasks(tasks, prio):
+    if len(tasks) == 0:
+        print("There's no task in task set")
+        exit()
     for name, attr in tasks.items():
         prio[name] = attr.prd
-        attr.art = attr.off
+        attr.ret = attr.ext
 
-def insert_task_in_queue(queue, prio_set, name):
-    queue.append(name)
-    queue.sort(key=lambda i : prio_set[i])
+def insert_task_in_queue(name, affi):
+    if not name in task_set.keys() :
+        print("This task is not in task_set")
+        return
+    run_q[affi].append(name)
+    update_task_status(name, task_set[name].art, 'ready')
+    #run_q[affi].sort(key=lambda i : prio_set[i])
+    run_q[affi].sort(key=lambda i : task_set[i].off + (task_set[i].prd * task_set[i].cnt))
 
-def update_task_status(task, curr_time):
-    task.stt = 'run'
-    task.art = curr_time
-    return task
+def update_task_status(task_name, arrival_time, status):
+    task = task_set[task_name]
+    task.stt = status
+    task.art = arrival_time
 
-def execute_task(tasks, cpu, queue, prio_set, curr_time):
-    next_task_name = queue.pop(0)
-    cpu = next_task_name
-    tasks[next_task_name] = update_task_status(task_set[next_task_name], curr_time)
-    return cpu
+def execute_task(ready_task, curr_time, affi):
+    update_task_status(ready_task, curr_time, 'run')
+    cpus[affi] = ready_task
 
-def initialize_system(queue, cpus, tasks, prio_set, curr_time):
-    initialize_tasks(tasks, prio_set)
-    #print(prio_set)
-
-    affi = 0 #USE ONLY 1 CPU
-    #for affi in range(len(cpus)):
-    for attr in tasks.values():
-        insert_task_in_queue(queue[affi], prio_set, attr.name)
-    #print(queue)
-    if queue[affi] : cpus[affi] = execute_task(tasks, cpus[affi], queue[affi], prio_set, curr_time)
-    else : print("There's no ready task in run queue")
-    print("init END")
+def print_queue(comment, queue):
+    print("+++",comment,"+++")
+    for idx in range(len(queue)):
+        print("Queue #",idx,"task:",queue[idx])
+    print()
 
 def print_cpu_status(comment, cpus):
     print("+++",comment,"+++")
@@ -67,28 +64,103 @@ def print_cpu_status(comment, cpus):
 def print_task_status(comment, task_set):
     print("+++",comment,"+++")
     for task in task_set.values():
-        print(task.name, " status:", task.stt,", arrival time:", task.art)
+        print(task.name)
+        print("  status:", task.stt,", arrival time:", task.art)
+        #print("  arrival time:", task.art)
+        print("  remaining time:", task.ret)
     print()
 
-def find_min_event_time(queue, cpus, tasks, prio_set):
-    affi = 0 #USE ONLY 1 CPU
-    next_off = 0
+def find_min_event_time(current_t, affi):
+    next_evt_list = []
+    if not run_q[affi]:
+        print("There's no tasks in run run_q")
+        exit()
+    
     run_task = cpus[affi]
-    run_task_prio = prio_set[cpus[affi]]
-    ready_task_prio = prio_set[queue[affi][0]]
-   
-    if run_task_prio <= ready_task_prio:
-        print("not preemption!")
-        next_off = task_set[run_task].ext
-        print("next_off: ",next_off)
-        return next_off
-    #else:
+    #print(task_set[run_task])
+    terminate_t = task_set[run_task].art + task_set[run_task].ret
+    print(run_task,"'s terminate time:",terminate_t)
+    for ready_task in run_q[affi]:
+        release_t = (task_set[ready_task].prd * task_set[ready_task].cnt) + task_set[ready_task].off
+        print(ready_task, "'s release time:",release_t)
+        if run_task not in task_set.keys(): #next task is firtst task after cpu idle time
+            next_evt = release_t
+        elif prio_set[run_task] <= prio_set[ready_task]:
+            next_evt = max(release_t, terminate_t)
+        elif terminate_t <= release_t:
+            next_evt = release_t
+        else:                        #Occur preemption
+            next_evt = max(release_t, current_t)
+        next_task = ready_task
+        next_evt_list.append((next_evt,next_task))
+    #HMMMM.....
+    next_evt = (task_set[run_task].prd * (task_set[run_task].cnt+1)) + task_set[run_task].off
+    next_task = run_task
+    next_evt_list.append((next_evt,next_task))
+    
+    min_next_evt = min(next_evt_list)
+    
+    return min_next_evt
+
+def update_system_status(curr_t, next_evt, next_task, affi):
+    next_off = next_evt - curr_t
+    run_task = cpus[affi]
+
+    #if next_task not in run_q[affi]:
+    if next_task not in task_set:
+        print("The next task is not in run queue:", next_task)
+        exit()
+    if next_off < 0:
+        print("It seems strange...next offset is negative value", next_off)
+        exit()
+    elif next_off < task_set[run_task].ret: #Occur preemption
+        print("occur preemption!")
+        task_set[run_task].ret = task_set[run_task].ext - next_off
+    else:
+        print("terminate normally")
+        task_set[run_task].ret = task_set[run_task].ext
+        task_set[run_task].cnt = task_set[run_task].cnt + 1
+    insert_task_in_queue(run_task, affi)
+    next_task = run_q[affi].pop(run_q[affi].index(next_task))
+    execute_task(next_task, next_evt, affi)
+    #insert_task_in_queue(run_task, affi)
+    
+def initialize_system(curr_time, affi):
+    initialize_tasks(task_set, prio_set)
+    #print(prio_set)
+
+    #for affi in range(len(cpus)):
+    for attr in task_set.values():
+        insert_task_in_queue(attr.name, affi)
+    if run_q[affi] : 
+        ready_task=run_q[affi].pop(0)
+        execute_task(ready_task, curr_time, affi)
+    else : print("There's no ready task in run queue")
+
+def task_timing_simulation():
+    curr_t = 0
+    next_evt = 0
+    affi = 0 #USE ONLY 1 CPU
+    next_task = 'task_0'
+    initialize_system(curr_t, affi)
+    print_cpu_status("cpu status after initialize ", cpus)
+    print_task_status("task status after initialize", task_set)
+    print_queue("queue after initialize", run_q[affi])
+    while curr_t < 100:
+        print()
+        print("-------------------------------")
+        print("current system time", curr_t)
         
+        next_evt, next_task = find_min_event_time(curr_t, affi)
+        
+        print("time to next event ", next_evt)
+        update_system_status(curr_t, next_evt, next_task, affi)
+        curr_t = next_evt
+        
+        print()
+        print_cpu_status("cpu status ", cpus)
+        print_task_status("task status ", task_set)
+        print_queue("queue", run_q[affi])
+        input('').split(" ")[0]	
 
-    print("min")
-    return 1
-
-def update_system_status(curr_t, next_off, queue, cpus, tasks):
-    print("update")
-
-task_timing_simulation(run_q, cpus, task_set, prio_set)
+task_timing_simulation()
