@@ -9,10 +9,9 @@ def print_queue(comment, queue):
         print("Queue #",idx,"task:",queue[idx])
     print()
 
-def print_cpu_status(comment, cpus):
+def print_cpu_status(comment, running_task, cpu_idx):
     print("+++",comment,"+++")
-    for cpu_idx in range(len(cpus)):
-        print("CPU #",cpu_idx, " status:", cpus[cpu_idx])
+    print("CPU #", cpu_idx, " status:", running_task)
     print()
 
 def print_task_status(comment, task_set):
@@ -27,24 +26,22 @@ def print_task_status(comment, task_set):
 def show_response_time(response_time):
     print(response_time)
     plt.hist(response_time, bins = len(response_time))
-    plt.show()
+    #plt.show()
+    #input('').split(" ")[0]
 
 ###########################################
 # utilities for task processing
 ############################################
-def insert_task_in_queue(name, affi, tasks, queue):
+def insert_task_in_queue(name, tasks, queue):
     if not name in tasks.keys() :
         print("This task is not in task_set")
         return
-    queue[affi].append(name)
+    queue.append(name)
     update_task_status(name, tasks[name].art, tasks, 'ready')
-    queue[affi].sort(key=lambda i : tasks[i].off + (tasks[i].prd * tasks[i].cnt))
-
-def assign_task_to_cpu(ready_task, curr_time, affi, tasks, cpus):
-    update_task_status(ready_task, curr_time, tasks, 'run')
-    cpus[affi] = ready_task
+    queue.sort(key=lambda i : tasks[i].off + (tasks[i].prd * tasks[i].cnt))
 
 def update_task_status(task_name, arrival_time, tasks, status):
     task = tasks[task_name]
     task.stt = status
     task.art = arrival_time
+    return task_name
