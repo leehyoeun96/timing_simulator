@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 ###########################################
 # utilities for printing
 ############################################
@@ -22,6 +24,11 @@ def print_task_status(comment, task_set):
         print("  remaining time:", task.ret)
     print()
 
+def show_response_time(response_time):
+    print(response_time)
+    plt.hist(response_time, bins = len(response_time))
+    plt.show()
+
 ###########################################
 # utilities for task processing
 ############################################
@@ -33,7 +40,7 @@ def insert_task_in_queue(name, affi, tasks, queue):
     update_task_status(name, tasks[name].art, tasks, 'ready')
     queue[affi].sort(key=lambda i : tasks[i].off + (tasks[i].prd * tasks[i].cnt))
 
-def execute_task(ready_task, curr_time, affi, tasks, cpus):
+def assign_task_to_cpu(ready_task, curr_time, affi, tasks, cpus):
     update_task_status(ready_task, curr_time, tasks, 'run')
     cpus[affi] = ready_task
 

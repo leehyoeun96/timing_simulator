@@ -1,12 +1,7 @@
 from recordtype import recordtype
+from simcpu import *
 import util as util
-import timing_simulator as tsim
-import matplotlib.pyplot as plt
 
-ncpus = 1
-cpus = [0 for x in range(ncpus)]
-run_q = [list() for x in range(ncpus)]
-response_time_list = []
 task_attr = recordtype("task_attr", 'name, ext, ret, art, prd, cnt, off, rtd, stt')
 '''
 ext = excution time
@@ -19,6 +14,7 @@ rtd = response time distribution
 stt = status
 '''
 
+ncpus = 1
 prio_set = dict()
 task_set = {
     'task_A': task_attr(name='task_A', ext=5, ret=0, art=0, prd=100, cnt=0, off=5, rtd=0, stt='ready'),
@@ -26,30 +22,7 @@ task_set = {
     'task_C': task_attr(name='task_C', ext=5, ret=0, art=0, prd=10,  cnt=0, off=2, rtd=0, stt='ready')
 }
 
-def task_timing_simulation():
-    curr_t = 0
-    next_evt = 0
-    affi = ncpus-1 #USE ONLY 1 CPU
-    next_task = 'task_0'
-    tsim.initialize_system(curr_t, affi, task_set, prio_set, cpus, run_q)
-    util.print_cpu_status("cpu status after initialize ", cpus)
-    util.print_task_status("task status after initialize", task_set)
-    util.print_queue("queue after initialize", run_q[affi])
-    while curr_t < 100:
-        print("-------------------------------")
-        next_evt, next_task = tsim.find_min_event_time(curr_t, affi, task_set, prio_set, cpus, run_q)
-        tsim.update_system_status(curr_t, next_evt, next_task, response_time_list, affi, task_set, prio_set, cpus, run_q)
-        
-        #print("current system time", curr_t)
-        #print("time to next event ", next_evt)
-        curr_t = next_evt
-        
-        util.print_cpu_status("cpu status ", cpus)
-        util.print_task_status("task status ", task_set)
-        util.print_queue("queue status", run_q[affi])
-        #input('').split(" ")[0]	
+simcpu = SIMCPU(prio_set, task_set, ncpus)
+response_time_list = simcpu.main()
 
-task_timing_simulation()
-print(response_time_list)
-plt.hist(response_time_list, bins = len(response_time_list))
-plt.show()
+util.show_response_time(response_time_list)
