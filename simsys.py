@@ -1,101 +1,90 @@
 from util import *
+from simcpu import *
+from recordtype import recordtype
 
-def calculate_response_time(task, tasks, response_list):
-    print("*******************************")
-    print("task name: ",tasks[task].name)
-    arrival_time = tasks[task].art
-    print("latest arrival time",arrival_time)
-    release_time = (tasks[task].prd * tasks[task].cnt) + tasks[task].off
-    print("release time", release_time)
-    remaining_excution_time = tasks[task].ret
-    print("remainig excution time", remaining_excution_time)
-    response_time = arrival_time - release_time + remaining_excution_time
-    print("response time", response_time)
-    print("*******************************")
-    response_list.append(response_time)
-    
-class SIMCPU(object):
-    def __init__(self, cpu_idx, prio_set, task_set, curr_time):
-        self.icpu = cpu_idx
-        self.cpu_running = ''
-        self.rq_ready = list()
+task_attr = recordtype("task_attr", 'name, ext, ret, art, prd, cnt, off, aff, rtd, stt')
+'''
+ext = excution time
+ret = remaining excution time
+art = latest arrival time
+prd = period
+cnt = period count
+off = offset
+aff = affinity
+rtd = response time distribution
+stt = status
+'''
+
+class SIMSYS(object):
+    def __init__(self, ncpus, feat_set, cur_time, max_time):
+        self.ncpus = ncpus
+        self.cpus = [list() for i in range(ncpus)]
+        self.global_rq = list()
 
         self.rtl = list()
-        self.prios = prio_set
-        self.tasks = task_set
-        self.current_time = curr_time
+        self.prios = dict()
+        self.feats = feat_set
+        self.current_time = cur_time
+        self.max_time = max_time
 
-    def main(self):
-        self.initialize_cpu()
-        print_cpu_status("cpu status after initialize ", self.cpu_running, self.icpu)
-        print_task_status("task status after initialize", self.tasks)
-        print_queue("queue after initialize", self.rq_ready)
-
-        while self.current_time < 99:
-            print("-------------------------------")
-            next_evt, next_task = self.find_min_event_time()
-            self.update_system_status(next_evt, next_task)
-            
-            #print("current system time", curr_t)
-            #print("time to next event ", next_evt)
-            self.current_time = next_evt
-            
-            print_cpu_status("cpu status ", self.cpu_running, self.icpu)
-            print_task_status("task status ", self.tasks)
-            print_queue("queue status", self.rq_ready)
-        
-        return self.rtl
-
-    def initialize_cpu(self):
-        if len(self.tasks) == 0:
+    def initialize_system(self):
+        if not self.feats:
             print("There's no task in task set")
             exit()
-        for name, attr in self.tasks.items():
-            self.prios[name] = attr.prd
-            attr.ret = attr.ext
+
+        self.create_task_set()        
+        self.set_priority()
+
+        for cpu_idx in range(self.ncpus):
+            self.cpus[cpu_idx] = SIMCPU(cpu_idx, self.prios, self.tasks, self.current_time, self.max_time)
         
         for attr in self.tasks.values():
-            insert_task_in_queue(attr.name, self.tasks, self.rq_ready)
-        if self.rq_ready : 
-            ready_task=self.rq_ready.pop(0)
-            self.cpu_running = update_task_status(ready_task, self.current_time, self.tasks, 'run')
-        else : print("There's no ready task in run queue")
+            insert_task_in_queue(attr.name, self.tasks, self.global_rq)
+        
+        ready_task_list = self.allocate_task()
+        
+        ##initialize CPUs
+        for cpu_idx in ready_task_list.keys():
+            if cpu_idx >= self.ncpus:
+                print("Too few cpus to execute tasks")
+                exit()
+            print("---------------------------")
+            self.cpus[cpu_idx].initialize_cpu(ready_task_list[cpu_idx])
+            self.cpus[cpu_idx].print_status(" after initialize")
+ 
+    def allocate_task(self):
+        ready_task_list = {}
+
+        while len(self.global_rq):
+            ready_task=self.global_rq.pop(0)
+            cpu_idx = self.tasks[ready_task].aff
+            
+            if cpu_idx not in ready_task_list.keys():
+                ready_task_list[cpu_idx] = [ready_task]
+            else:
+                ready_task_list[cpu_idx].append(ready_task)
+
+        return ready_task_list
 
     def find_min_event_time(self):
-        next_evt_list = []
-        if not self.rq_ready:
-            print("There's no tasks in run queue")
-            exit()
-        if not self.cpu_running:
-            print("There's no running task")
+        min_event = ()
+        if not self.cpus:
+            print("There's no running cpu")
             exit()
 
-        run_task = self.cpu_running
-        #print(self.tasks[run_task])
-        terminate_t = self.tasks[run_task].art + self.tasks[run_task].ret
-        #print(run_task,"'s terminate time:",terminate_t)
-        for ready_task in self.rq_ready:
-            release_t = (self.tasks[ready_task].prd * self.tasks[ready_task].cnt) + self.tasks[ready_task].off
-            #print(ready_task, "'s release time:",release_t)
-            if run_task not in self.tasks.keys(): #next task is first task after cpu idle time
-                next_evt = release_t
-            elif self.prios[run_task] <= self.prios[ready_task]:
-                next_evt = max(release_t, terminate_t)
-            elif terminate_t <= release_t:
-                next_evt = release_t
-            else:                        #Occur preemption
-                next_evt = max(release_t, self.current_time)
-            next_task = ready_task
-            next_evt_list.append((next_evt,next_task))
-        
-        #HMMMM.....
-        next_evt = (self.tasks[run_task].prd * (self.tasks[run_task].cnt+1)) + self.tasks[run_task].off
-        next_task = run_task
-        next_evt_list.append((next_evt,next_task))
-        
-        min_next_evt = min(next_evt_list)
-        
-        return min_next_evt
+        for cpu in self.cpus:
+            next_event = cpu.find_min_event_time()
+            if not next_event: 
+                print("There's no running task in CPU", cpu.icpu)
+                continue
+            if not min_event:
+                min_event = next_event
+                evt_cpu_idx = cpu.icpu
+            elif min_event > next_event: 
+                min_event = next_event
+                evt_cpu_idx = cpu.icpu
+
+        return evt_cpu_idx, min_event
 
     def update_system_status(self, next_evt, next_task):
         next_off = next_evt - self.current_time
@@ -119,6 +108,23 @@ class SIMCPU(object):
             calculate_response_time(run_task, self.tasks, self.rtl)
             self.tasks[run_task].ret = self.tasks[run_task].ext
             self.tasks[run_task].cnt = self.tasks[run_task].cnt + 1
-        insert_task_in_queue(run_task, self.tasks, self.rq_ready)
-        next_task = self.rq_ready.pop(self.rq_ready.index(next_task))
+        insert_task_in_queue(run_task, self.tasks, self.global_rq)
+        next_task = self.global_rq.pop(self.global_rq.index(next_task))
         self.cpu_running = update_task_status(next_task, next_evt, self.tasks, 'run')
+
+    def create_task_set(self):
+        self.tasks = { } 
+        for task, features in self.feats.items():
+                task_obj = task_attr(task, ext=self.feats[task].ext, ret=0, art=0, prd=self.feats[task].prd, cnt=0, off=self.feats[task].off, aff=self.feats[task].aff, rtd=0, stt='')
+                self.tasks.update({task: task_obj})
+        print_task_status(" after create task set",self.tasks)
+    '''
+    def print_status(self, command):
+        print_cpu_status("cpu status"+command, self.running_task, self.icpu)
+        print_task_status("task status"+command, self.tasks)
+        print_queue("queue status"+command, self.local_rq)
+    '''
+    def set_priority(self):
+        for name, attr in self.tasks.items():
+            self.prios[name] = attr.prd
+            attr.ret = attr.ext

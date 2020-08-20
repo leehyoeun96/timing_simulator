@@ -33,7 +33,7 @@ def show_response_time(response_time):
 # utilities for task processing
 ############################################
 def insert_task_in_queue(name, tasks, queue):
-    if not name in tasks.keys() :
+    if not name in tasks.keys():
         print("This task is not in task_set")
         return
     queue.append(name)
