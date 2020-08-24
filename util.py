@@ -19,7 +19,6 @@ def print_task_status(comment, task_set):
     for task in task_set.values():
         print(task.name)
         print("  status:", task.stt,", arrival time:", task.art)
-        #print("  arrival time:", task.art)
         print("  remaining time:", task.ret)
     print()
 
@@ -27,7 +26,6 @@ def show_response_time(response_time):
     print(response_time)
     plt.hist(response_time, bins = len(response_time))
     #plt.show()
-    #input('').split(" ")[0]
 
 ###########################################
 # utilities for task processing
