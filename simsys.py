@@ -48,7 +48,7 @@ class SIMSYS(object):
 
         for cpu_idx in range(self.ncpus):
             print("---------------------------")
-            self.cpus[cpu_idx].initialize_cpu()
+            self.current_time = self.cpus[cpu_idx].initialize_cpu()
             self.cpus[cpu_idx].print_status(" after initialize")
  
     def dispatch_classified_tasks(self):
@@ -64,7 +64,7 @@ class SIMSYS(object):
             if cpu_idx not in classified_tasks.keys():
                 classified_tasks[cpu_idx] = [ready_task]
             else:
-                classified_tasks[cpu_idx].append(ready_task)        
+                classified_tasks[cpu_idx].append(ready_task)
         
         for affi, tasks in classified_tasks.items():
             if affi >= self.ncpus:
@@ -84,6 +84,7 @@ class SIMSYS(object):
 
         for cpu in self.cpus:
             next_event = cpu.find_min_event_time()
+            print(next_event)
             if not next_event: 
                 print("There's no running task in CPU", cpu.icpu)
                 continue
@@ -112,6 +113,10 @@ class SIMSYS(object):
         self.current_time = next_time
         
         if self.current_time > self.max_time:
+            for cpu in self.cpus:
+                #fake event for update cpu status
+                cpu.update_cpu_status(next_time, cpu.running_task) 
+                cpu.print_status("after final update")
             self.gathered_rtl = self.gather_response_time()
 
     def gather_response_time(self):
