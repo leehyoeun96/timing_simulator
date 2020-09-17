@@ -1,5 +1,6 @@
 from util import *
 from recordtype import recordtype
+import random
 
 def calculate_response_time(task, tasks, response_list):
     print("*******************************")
@@ -19,7 +20,7 @@ def calculate_response_time(task, tasks, response_list):
     response_list.append(response_time)
     
 class SIMCPU(object):
-    def __init__(self, cpu_idx, prio_set, task_set, cur_time, max_time):
+    def __init__(self, cpu_idx, prio_set, task_set, lookup_table, cur_time, max_time):
         self.icpu = cpu_idx
         self.running_task = ''
         self.local_rq = list()
@@ -27,6 +28,7 @@ class SIMCPU(object):
         self.rtl = list()
         self.prios = prio_set
         self.tasks = task_set
+        self.lut = lookup_table
         self.current_time = cur_time
         self.max_time = max_time
 
@@ -78,8 +80,9 @@ class SIMCPU(object):
             next_evt_list.append((next_evt,next_task))
         
         #include running task to next event candidates
-        next_evt = (self.tasks[run_task].prd * (self.tasks[run_task].cnt+1)) + self.tasks[run_task].off
+        release_t = (self.tasks[run_task].prd * (self.tasks[run_task].cnt+1)) + self.tasks[run_task].off
         next_task = run_task
+        next_evt = max(release_t, terminate_t)
         next_evt_list.append((next_evt,next_task))
         
         min_next_evt = min(next_evt_list)
@@ -104,11 +107,13 @@ class SIMCPU(object):
         
         term_task = self.running_task
         if next_off < self.tasks[term_task].ret: #Occur preemption
-            #print("occur preemption!")
+            print("occur preemption!")
             self.tasks[term_task].ret = self.tasks[term_task].ret - next_off
         else:
             #print("terminate normally")
             calculate_response_time(term_task, self.tasks, self.rtl)
+            next_ext = self.sampling_ext(term_task)
+            self.tasks[term_task].ext = next_ext
             self.tasks[term_task].ret = self.tasks[term_task].ext
             self.tasks[term_task].cnt = self.tasks[term_task].cnt + 1
         '''
@@ -132,3 +137,32 @@ class SIMCPU(object):
         print_cpu_status("CPU status "+command, self.running_task, self.icpu)
         print_task_status("Task status "+command, self.tasks)
         print_queue("Queue status "+command, self.local_rq)
+
+    def sampling_ext(self, name):
+        ###
+        ##Generate real number randomly.
+        ##And lookup sampling table.
+        ###
+        if not name in self.lut:
+            print("Define lookup table about", name)
+            exit()
+        
+        ext_sample = 0
+        real = random.random()
+        cml_prob = 0
+        #print(name)
+        for time, prob in self.lut[name]:
+            cml_prob = cml_prob + prob
+            if max(real, cml_prob) != real:
+                ext_sample = time
+                break
+        
+        return ext_sample
+
+    def insert_task_in_lrq(self, name):
+        if not name in self.tasks.keys():
+            print(name, "is not in task_set")
+            return
+        self.local_rq.append(name)
+        update_task_status(name, self.tasks[name].art, self.tasks, 'ready')
+        self.local_rq.sort(key=lambda i : self.tasks[i].off + (self.tasks[i].prd * self.tasks[i].cnt))

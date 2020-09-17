@@ -1,6 +1,7 @@
 from util import *
 from simcpu import *
 from recordtype import recordtype
+import random
 
 task_attr = recordtype("task_attr", 'name, ext, ret, art, prd, cnt, off, aff, rtd, stt')
 '''
@@ -16,7 +17,7 @@ stt = status
 '''
 
 class SIMSYS(object):
-    def __init__(self, ncpus, feat_set, cur_time, max_time):
+    def __init__(self, ncpus, feat_set, lookup_table, cur_time, max_time):
         self.ncpus = ncpus
         self.cpus = [list() for i in range(ncpus)]
         self.global_rq = list()
@@ -24,6 +25,7 @@ class SIMSYS(object):
         self.gathered_rtl = list()
         self.prios = dict()
         self.feats = feat_set
+        self.lut = lookup_table        
         self.current_time = cur_time
         self.max_time = max_time
 
@@ -37,13 +39,13 @@ class SIMSYS(object):
 
         self.create_task_set()        
         for attr in self.tasks.values():
-            insert_task_in_queue(attr.name, self.tasks, self.global_rq)
+            self.insert_task_in_grq(attr.name)
         self.initialize_cpus()
 
     def initialize_cpus(self):
         ##initialize CPUs
         for cpu_idx in range(self.ncpus):
-            self.cpus[cpu_idx] = SIMCPU(cpu_idx, self.prios, self.tasks, self.current_time, self.max_time)
+            self.cpus[cpu_idx] = SIMCPU(cpu_idx, self.prios, self.tasks, self.lut, self.current_time, self.max_time)
         self.dispatch_classified_tasks()
 
         for cpu_idx in range(self.ncpus):
@@ -71,7 +73,7 @@ class SIMSYS(object):
                 print("Too few cpus to execute tasks")
                 exit()
             for name in tasks:
-                insert_task_in_queue(name, self.tasks, self.cpus[affi].local_rq)
+                self.cpus[affi].insert_task_in_lrq(name)
 
     def find_min_event_time(self):
         ###
@@ -84,7 +86,7 @@ class SIMSYS(object):
 
         for cpu in self.cpus:
             next_event = cpu.find_min_event_time()
-            print(next_event)
+            #print(next_event)
             if not next_event: 
                 print("There's no running task in CPU", cpu.icpu)
                 continue
@@ -106,17 +108,17 @@ class SIMSYS(object):
         next_time, next_task = next_event
         term_task = self.cpus[cpu_idx].update_cpu_status(next_time, next_task)
         
-        insert_task_in_queue(term_task, self.tasks, self.global_rq)
+        self.insert_task_in_grq(term_task)
         self.dispatch_classified_tasks()
         
         self.cpus[cpu_idx].current_time = next_time
         self.current_time = next_time
         
-        if self.current_time > self.max_time:
+        if self.current_time >= self.max_time:
             for cpu in self.cpus:
                 #fake event for update cpu status
-                cpu.update_cpu_status(next_time, cpu.running_task) 
-                cpu.print_status("after final update")
+                cpu.update_cpu_status(self.current_time, cpu.running_task) 
+                #cpu.print_status("after final update")
             self.gathered_rtl = self.gather_response_time()
 
     def gather_response_time(self):
@@ -134,8 +136,9 @@ class SIMSYS(object):
         ###
         self.tasks = { } 
         for task, features in self.feats.items():
-                task_obj = task_attr(task, ext=self.feats[task].ext, ret=0, art=0, prd=self.feats[task].prd, cnt=0, off=self.feats[task].off, aff=self.feats[task].aff, rtd=0, stt='')
-                self.tasks.update({task: task_obj})
+            ext_sample = self.sampling_ext(task)
+            task_obj = task_attr(task, ext=ext_sample, ret=ext_sample, art=0, prd=self.feats[task].prd, cnt=0, off=self.feats[task].off, aff=self.feats[task].aff, rtd=0, stt='')
+            self.tasks.update({task: task_obj})
         print_task_status(" after create task set",self.tasks)
         self.set_priority()
 
@@ -145,4 +148,36 @@ class SIMSYS(object):
         ###
         for name, attr in self.tasks.items():
             self.prios[name] = attr.prd
-            attr.ret = attr.ext
+
+    def sampling_ext(self, name):
+        ###
+        ##Generate real number randomly.
+        ##And lookup sampling table.
+        ###
+        if not name in self.lut:
+            print("Define lookup table about", name)
+            exit()
+        
+        ext_sample = 0
+        real = random.random()
+        cml_prob = 0
+        #print(name)
+        for time, prob in self.lut[name]:
+            cml_prob = cml_prob + prob
+            if max(real, cml_prob) != real:
+                ext_sample = time
+                break
+        
+        if cml_prob > 1 or ext_sample == 0:
+            print("total probability is not 1 about", name)
+            exit()
+
+        return ext_sample
+
+    def insert_task_in_grq(self, name):
+        if not name in self.tasks.keys():
+            print(name, "is not in task_set")
+            return
+        self.global_rq.append(name)
+        update_task_status(name, self.tasks[name].art, self.tasks, 'ready')
+        self.global_rq.sort(key=lambda i : self.tasks[i].off + (self.tasks[i].prd * self.tasks[i].cnt))

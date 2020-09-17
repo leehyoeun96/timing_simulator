@@ -18,11 +18,16 @@ def print_task_status(comment, task_set):
     print("+++",comment,"+++")
     for task in task_set.values():
         print(task.name)
-        print("  status:", task.stt,", arrival time:", task.art)
+        print("  status:", task.stt)
+        print("  arrival time:", task.art)
         print("  remaining time:", task.ret)
+        print("  execution time:", task.ext)
     print()
 
 def show_response_time(response_time):
+    if len(response_time) == 0:
+        print("ERROR: Response time was NOT SAVED")
+        exit()
     print(response_time)
     plt.hist(response_time, bins = len(response_time))
     #plt.show()
@@ -30,13 +35,6 @@ def show_response_time(response_time):
 ###########################################
 # utilities for task processing
 ############################################
-def insert_task_in_queue(name, tasks, queue):
-    if not name in tasks.keys():
-        print(name, "is not in task_set")
-        return
-    queue.append(name)
-    update_task_status(name, tasks[name].art, tasks, 'ready')
-    queue.sort(key=lambda i : tasks[i].off + (tasks[i].prd * tasks[i].cnt))
 
 def update_task_status(task_name, arrival_time, tasks, status):
     task = tasks[task_name]
