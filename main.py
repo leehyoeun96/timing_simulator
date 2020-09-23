@@ -15,12 +15,9 @@ feature_set = {
 }
 
 lookup_table = {
-    'task_A': [ (5, 0.5), 
-                (10, 0.5), ],
-    'task_B': [ (5, 0.5), 
-                (10, 0.5), ],
-    'task_C': [ (5, 0.5), 
-                (7, 0.5), ],
+    'task_A': [ (5, 1), ],
+    'task_B': [ (5, 1), ],
+    'task_C': [ (5, 1), ],
 } 
 '''
 lookup_table = {
@@ -50,7 +47,7 @@ def sys_simulation():
         cpu_idx, next_evt = simsys.find_min_event_time()
         simsys.update_system_status(cpu_idx, next_evt)
         simsys.cpus[cpu_idx].print_status("")
-        input('').split(" ")[0]
+        #input('').split(" ")[0]
     return simsys.gathered_rtl
 
 response_time_list = sys_simulation()

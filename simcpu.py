@@ -1,24 +1,7 @@
 from util import *
 from recordtype import recordtype
 import random
-
-def calculate_response_time(task, tasks, response_list):
-    print("*******************************")
-    print("task name: ",tasks[task].name)
-    arrival_time = tasks[task].art
-    print("latest arrival time",arrival_time)
-    release_time = (tasks[task].prd * tasks[task].cnt) + tasks[task].off
-    print("release time", release_time)
-    remaining_excution_time = tasks[task].ret
-    print("remainig excution time", remaining_excution_time)
-    response_time = arrival_time - release_time + remaining_excution_time
-    print("response time", response_time)
-    print("*******************************")
-    if response_time< 0:
-        print("It seems strange... response time is negative value")
-        exit()
-    response_list.append(response_time)
-    
+   
 class SIMCPU(object):
     def __init__(self, cpu_idx, prio_set, task_set, lookup_table, cur_time, max_time):
         self.icpu = cpu_idx
@@ -108,14 +91,14 @@ class SIMCPU(object):
         term_task = self.running_task
         if next_off < self.tasks[term_task].ret: #Occur preemption
             print("occur preemption!")
-            self.tasks[term_task].ret = self.tasks[term_task].ret - next_off
+            self.tasks[term_task].set_ret(self.tasks[term_task].ret - next_off)
         else:
             #print("terminate normally")
-            calculate_response_time(term_task, self.tasks, self.rtl)
+            self.tasks[term_task].calculate_response_time(term_task, self.tasks, self.rtl)
             next_ext = self.sampling_ext(term_task)
-            self.tasks[term_task].ext = next_ext
-            self.tasks[term_task].ret = self.tasks[term_task].ext
-            self.tasks[term_task].cnt = self.tasks[term_task].cnt + 1
+            self.tasks[term_task].set_ext(next_ext)
+            self.tasks[term_task].set_ret(self.tasks[term_task].ext)
+            self.tasks[term_task].set_cnt(self.tasks[term_task].cnt + 1)
         '''
         if next_task in self.local_rq:
             self.local_rq.remove(next_task)

@@ -1,5 +1,6 @@
 from util import *
 from simcpu import *
+from simtsk import *
 from recordtype import recordtype
 import random
 
@@ -38,8 +39,8 @@ class SIMSYS(object):
             exit()
 
         self.create_task_set()        
-        for attr in self.tasks.values():
-            self.insert_task_in_grq(attr.name)
+        for task in self.tasks.values():
+            self.insert_task_in_grq(task.name)
         self.initialize_cpus()
 
     def initialize_cpus(self):
@@ -137,7 +138,8 @@ class SIMSYS(object):
         self.tasks = { } 
         for task, features in self.feats.items():
             ext_sample = self.sampling_ext(task)
-            task_obj = task_attr(task, ext=ext_sample, ret=ext_sample, art=0, prd=self.feats[task].prd, cnt=0, off=self.feats[task].off, aff=self.feats[task].aff, rtd=0, stt='')
+            task_obj = SIMTSK(task, ext_sample, features.prd, features.off, features.aff)
+            #task_obj = task_attr(task, ext=ext_sample, ret=ext_sample, art=0, prd=self.feats[task].prd, cnt=0, off=self.feats[task].off, aff=self.feats[task].aff, rtd=0, stt='')
             self.tasks.update({task: task_obj})
         print_task_status(" after create task set",self.tasks)
         self.set_priority()
@@ -146,8 +148,8 @@ class SIMSYS(object):
         ###
         ##Prioritize task in task set.
         ###
-        for name, attr in self.tasks.items():
-            self.prios[name] = attr.prd
+        for name, task in self.tasks.items():
+            self.prios[name] = task.prd
 
     def sampling_ext(self, name):
         ###

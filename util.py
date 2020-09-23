@@ -38,6 +38,6 @@ def show_response_time(response_time):
 
 def update_task_status(task_name, arrival_time, tasks, status):
     task = tasks[task_name]
-    task.stt = status
-    task.art = arrival_time
+    task.set_stt(status)
+    task.set_art(arrival_time)
     return task_name
