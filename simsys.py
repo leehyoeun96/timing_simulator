@@ -4,7 +4,7 @@ from simtsk import *
 from recordtype import recordtype
 import random
 
-task_attr = recordtype("task_attr", 'name, ext, ret, art, prd, cnt, off, aff, rtd, stt')
+#task_attr = recordtype("task_attr", 'name, ext, ret, art, prd, cnt, off, aff, rtd, stt')
 '''
 ext = excution time
 ret = remaining excution time
@@ -18,15 +18,17 @@ stt = status
 '''
 
 class SIMSYS(object):
-    def __init__(self, ncpus, feat_set, lookup_table, cur_time, max_time):
+    def __init__(self, ncpus, feat_set, ext_table, task_graph, cur_time, max_time):
         self.ncpus = ncpus
         self.cpus = [list() for i in range(ncpus)]
         self.global_rq = list()
 
         self.gathered_rtl = list()
+        self.gathered_msg = list()
         self.prios = dict()
         self.feats = feat_set
-        self.lut = lookup_table        
+        self.ext_table = ext_table
+        self.graph = task_graph
         self.current_time = cur_time
         self.max_time = max_time
 
@@ -44,9 +46,11 @@ class SIMSYS(object):
         self.initialize_cpus()
 
     def initialize_cpus(self):
-        ##initialize CPUs
+        ###
+        ##Initialize CPUs
+        ###
         for cpu_idx in range(self.ncpus):
-            self.cpus[cpu_idx] = SIMCPU(cpu_idx, self.prios, self.tasks, self.lut, self.current_time, self.max_time)
+            self.cpus[cpu_idx] = SIMCPU(cpu_idx, self.prios, self.tasks, self.ext_table, self.graph, self.current_time, self.max_time)
         self.dispatch_classified_tasks()
 
         for cpu_idx in range(self.ncpus):
@@ -107,20 +111,47 @@ class SIMSYS(object):
         ##Finally, update time of system and the cpu.
         ###
         next_time, next_task = next_event
-        term_task = self.cpus[cpu_idx].update_cpu_status(next_time, next_task)
-        
-        self.insert_task_in_grq(term_task)
-        self.dispatch_classified_tasks()
-        
+        term_task_name = self.cpus[cpu_idx].update_cpu_status(next_time, next_task)
+         
+        #self.insert_task_in_grq(term_task_name)
+        #self.dispatch_classified_tasks()
         self.cpus[cpu_idx].current_time = next_time
         self.current_time = next_time
-        
+        if term_task_name == None:
+            print("Terminated task is None")
+            exit()
+            return
+        term_task = self.tasks[term_task_name]
+        successors = term_task.get_succ()
+
+        for succ_name in successors:
+            succ = self.tasks[succ_name]
+            msg = term_task.generate_msg(self.current_time)
+            print_message("Generate message",msg)
+            succ.insert_msg(msg)
+            if succ.is_ready():
+                self.insert_task_in_grq(succ_name)
+
+        if term_task.is_sink():
+            msg = term_task.save_msgs(self.current_time)
+            print_message("Generate message",msg)
+            self.gathered_msg.append(msg)
+        if term_task.is_src:
+            self.insert_task_in_grq(term_task_name)
+
+        self.dispatch_classified_tasks()
+        print("Current task:",term_task_name)
+        print("Successor:",successors)
+        input()
+
         if self.current_time >= self.max_time:
             for cpu in self.cpus:
                 #fake event for update cpu status
                 cpu.update_cpu_status(self.current_time, cpu.running_task) 
                 #cpu.print_status("after final update")
             self.gathered_rtl = self.gather_response_time()
+            for msg in self.gathered_msg:
+                print_message("Final message", msg)
 
     def gather_response_time(self):
         ###
@@ -136,9 +167,9 @@ class SIMSYS(object):
         ##Create task set with task features.
         ###
         self.tasks = { } 
-        for task, features in self.feats.items():
+        for task in self.feats.keys():
             ext_sample = self.sampling_ext(task)
-            task_obj = SIMTSK(task, ext_sample, features.prd, features.off, features.aff)
+            task_obj = SIMTSK(task, ext_sample, self.graph, self.feats, self.current_time)
             #task_obj = task_attr(task, ext=ext_sample, ret=ext_sample, art=0, prd=self.feats[task].prd, cnt=0, off=self.feats[task].off, aff=self.feats[task].aff, rtd=0, stt='')
             self.tasks.update({task: task_obj})
         print_task_status(" after create task set",self.tasks)
@@ -156,7 +187,7 @@ class SIMSYS(object):
         ##Generate real number randomly.
         ##And lookup sampling table.
         ###
-        if not name in self.lut:
+        if not name in self.ext_table:
             print("Define lookup table about", name)
             exit()
         
@@ -164,7 +195,7 @@ class SIMSYS(object):
         real = random.random()
         cml_prob = 0
         #print(name)
-        for time, prob in self.lut[name]:
+        for time, prob in self.ext_table[name]:
             cml_prob = cml_prob + prob
             if max(real, cml_prob) != real:
                 ext_sample = time

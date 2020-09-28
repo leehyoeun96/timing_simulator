@@ -1,26 +1,34 @@
 from recordtype import recordtype
 from simsys import *
+import time
 import util as util
 
-task_feat = recordtype("task_feat", 'ext, prd, off, aff')
+task_feat = recordtype("task_feat", 'prd, off, aff')
 
 cur_time = 0
 max_time = 50
 ncpus = 1
 
-feature_set = {
-    'task_A': task_feat(ext=10,prd=100, off=0, aff=0),
-    'task_B': task_feat(ext=5, prd=25,  off=0, aff=0),
-    'task_C': task_feat(ext=7, prd=10,  off=0, aff=0)
+task_graph = {
+    'task_0': ['task_A', 'task_B'],
+    'task_A': ['task_C'],
+    'task_B': ['task_C'],
+    'task_C': ['task_0']
 }
 
-lookup_table = {
+feature_set = {
+    'task_A': task_feat(prd=100, off=0, aff=0),
+    'task_B': task_feat(prd=25,  off=0, aff=0),
+    'task_C': task_feat(prd=25,  off=0, aff=0)
+}
+
+ext_table = {
     'task_A': [ (5, 1), ],
     'task_B': [ (5, 1), ],
     'task_C': [ (5, 1), ],
-} 
+}
 '''
-lookup_table = {
+ext_table = {
     'task_A': [ (3, 0.25), 
                 (5, 0.5),
                 (9, 0.25)],
@@ -39,7 +47,7 @@ lookup_table = {
 '''
 
 def sys_simulation():
-    simsys = SIMSYS(ncpus, feature_set, lookup_table, cur_time, max_time)
+    simsys = SIMSYS(ncpus, feature_set, ext_table, task_graph, cur_time, max_time)
     simsys.initialize_system()
     
     while simsys.current_time < simsys.max_time:
@@ -47,7 +55,6 @@ def sys_simulation():
         cpu_idx, next_evt = simsys.find_min_event_time()
         simsys.update_system_status(cpu_idx, next_evt)
         simsys.cpus[cpu_idx].print_status("")
-        #input('').split(" ")[0]
     return simsys.gathered_rtl
 
 response_time_list = sys_simulation()

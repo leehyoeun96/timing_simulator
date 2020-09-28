@@ -3,7 +3,7 @@ from recordtype import recordtype
 import random
    
 class SIMCPU(object):
-    def __init__(self, cpu_idx, prio_set, task_set, lookup_table, cur_time, max_time):
+    def __init__(self, cpu_idx, prio_set, task_set, lookup_table, task_graph, cur_time, max_time):
         self.icpu = cpu_idx
         self.running_task = ''
         self.local_rq = list()
@@ -12,6 +12,7 @@ class SIMCPU(object):
         self.prios = prio_set
         self.tasks = task_set
         self.lut = lookup_table
+        self.graph = task_graph
         self.current_time = cur_time
         self.max_time = max_time
 
@@ -94,7 +95,7 @@ class SIMCPU(object):
             self.tasks[term_task].set_ret(self.tasks[term_task].ret - next_off)
         else:
             #print("terminate normally")
-            self.tasks[term_task].calculate_response_time(term_task, self.tasks, self.rtl)
+            self.rtl = self.tasks[term_task].calculate_response_time(self.rtl)
             next_ext = self.sampling_ext(term_task)
             self.tasks[term_task].set_ext(next_ext)
             self.tasks[term_task].set_ret(self.tasks[term_task].ext)
@@ -136,7 +137,7 @@ class SIMCPU(object):
         #print(name)
         for time, prob in self.lut[name]:
             cml_prob = cml_prob + prob
-            if max(real, cml_prob) != real:
+            if max(real, cml_prob) != real or cml_prob == 1:
                 ext_sample = time
                 break
         
