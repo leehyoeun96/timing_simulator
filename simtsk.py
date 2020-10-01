@@ -23,6 +23,7 @@ class SIMTSK(object):
         self.feats = task_features
         self.stand_time = sys_time
         self.is_src = not self.get_pred()
+        self.msg_id = 0
 
 
     def get_pred(self):
@@ -56,7 +57,6 @@ class SIMTSK(object):
         msg = message(src = [], id = [], start = [], end = 0)
         for recv_msg in self.msg_q:
             for recv_idx, recv_src in enumerate(recv_msg.src):
-                #print(recv_src, msg.src)
                 if not recv_src in msg.src:
                     msg.src.append(recv_src)
                     msg.start.append(recv_msg.start[recv_idx])
@@ -67,16 +67,20 @@ class SIMTSK(object):
                     msg.src[orig_idx] = recv_msg.src[recv_idx]
                     msg.start[orig_idx] = recv_msg.start[recv_idx]
                     msg.id[orig_idx] = recv_msg.id[recv_idx]
+                #else: print("Received message is out of date.")
+
         return msg
 
-    def generate_msg(self, curr_time):
+    def generate_msg(self, curr_time, ret):
+        release_time = (self.prd * self.cnt) + self.off
         succ_list = self.get_succ()
         msg = message(src = [], id = [], start = [], end = 0)
         now = curr_time
+        now = now + ret
         if self.is_src:
-            i = now - self.stand_time
-            msg = message(src = [self.name], id = [i], start = [self.stand_time], end = now )
-            self.stand_time = now
+            msg = message(src = [self.name], id = [self.msg_id], start = [release_time], end = now )
+            self.msg_id = self.msg_id + 1
+            self.stand_time = curr_time
             return msg
         
         msg = self.merge_msg()
@@ -93,14 +97,14 @@ class SIMTSK(object):
         self.stand_time = now
         return msg
 
-    def save_msgs(self, curr_time):
+    def save_msgs(self, curr_time, ret):
         if not self.is_sink():
             print("ERROR: This is not sink node")
             exit()
         print("Save messages")
         msg = self.merge_msg()
         self.msg_q = []
-        msg.end = curr_time
+        msg.end = curr_time + ret
         return msg
     
     def insert_msg(self, msg):
@@ -160,8 +164,8 @@ def Test_Main():
     taskC = SIMTSK('task_C', 5, task_graph, feature_set, time.time())
     taskB.msg_q = [msg1, msg2]
     taskC.msg_q = [msg1, msg2]
-    print_message("",taskB.generate_msg())
+    print_message(taskB.generate_msg())
     for msg in taskC.save_msgs():
-        print_message("",msg)
+        print_message(msg)
 
 #Test_Main()

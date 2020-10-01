@@ -95,7 +95,7 @@ class SIMCPU(object):
         term_task = self.tasks[term_task_name]
         saved_ret = term_task.ret
         if next_off < term_task.ret: #Occur preemption
-            #print("occur preemption!")
+            print("occur preemption!")
             self.total_cons[term_task_name] = self.total_cons[term_task_name] + next_off
             term_task.set_ret(term_task.ret - next_off)
         else:
@@ -123,14 +123,14 @@ class SIMCPU(object):
         ##running task must needed
         if not run_task:
             print("CPU",self.icpu,": There's no running task")
-            return None
+            exit()
 
         terminate_t = self.tasks[run_task].art + self.tasks[run_task].ret
-        term_flag = False
+        term_flag = True
         for ready_task in self.local_rq:
             release_t = (self.tasks[ready_task].prd * self.tasks[ready_task].cnt) + self.tasks[ready_task].off
-            if self.prios[run_task] <= self.prios[ready_task] or terminate_t <= release_t:
-                term_flag = True
+            if not(self.prios[run_task] <= self.prios[ready_task] or terminate_t <= release_t):
+                term_flag = False
 
         print(run_task, "is terminated?:", term_flag)
         return term_flag, run_task

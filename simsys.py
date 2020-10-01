@@ -109,7 +109,7 @@ class SIMSYS(object):
                 cpu.update_cpu_status(self.current_time, cpu.running_task) 
             self.gathered_rtl = self.gather_response_time()
             for msg in self.gathered_msg:
-                print_message("Final message", msg)
+                print_message(msg)
  
     def dispatch_classified_tasks(self):
         ###
@@ -151,13 +151,15 @@ class SIMSYS(object):
 
         for succ_name in successors:
             succ = self.tasks[succ_name]
-            msg = term_task.generate_msg(self.current_time)
-            print_message("Generate message",msg)
+            #print("????????????????",self.current_time)
+            #input()
+            msg = term_task.generate_msg(self.current_time, term_task.ret)
+            print_message(msg)
             succ.insert_msg(msg)
 
         if term_task.is_sink():
-            msg = term_task.save_msgs(self.current_time)
-            print_message("Generate message",msg)
+            msg = term_task.save_msgs(self.current_time, term_task.ret)
+            print_message(msg)
             self.gathered_msg.append(msg)
         '''
         if term_task.is_src and not same_task_flag: 

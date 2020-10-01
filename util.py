@@ -25,13 +25,13 @@ def print_task_status(comment, task_set):
         print("  execution time:", task.ext)
     print()
 
-def print_message(comment, msg):
-    print("+++",comment,"+++")
+def print_message(msg):
+    print("###############################")
     print("  sources:", msg.src)
     print("  msg_ids:", msg.id)
     print("  start_t:", msg.start)
     print("  end_time:", msg.end)
-    print()
+    print("###############################")
 
 def show_response_time(response_time):
     if len(response_time) == 0:
