@@ -1,8 +1,8 @@
 from util import *
 from simcpu import *
 from simtsk import *
-from recordtype import recordtype
-import random
+#from recordtype import recordtype
+#import random
 
 #task_attr = recordtype("task_attr", 'name, ext, ret, art, prd, cnt, off, aff, rtd, stt')
 '''
@@ -32,6 +32,9 @@ class SIMSYS(object):
         self.current_time = cur_time
         self.max_time = max_time
 
+        self.total_prod = {name: 0 for name in self.feats}
+        self.total_prod_time = 0
+
     def initialize_system(self):
         ###
         ##Initialize task set, cpu instance and global queue.
@@ -42,7 +45,8 @@ class SIMSYS(object):
 
         self.create_task_set()        
         for task in self.tasks.values():
-            self.insert_task_in_grq(task.name)
+            #if task.is_ready():
+           self.insert_task_in_grq(task.name)
         self.initialize_cpus()
 
     def initialize_cpus(self):
@@ -111,16 +115,28 @@ class SIMSYS(object):
         ##Finally, update time of system and the cpu.
         ###
         next_time, next_task = next_event
-        term_task_name = self.cpus[cpu_idx].update_cpu_status(next_time, next_task)
-         
-        #self.insert_task_in_grq(term_task_name)
-        #self.dispatch_classified_tasks()
+        term_task_name, term_flag, check_param = self.cpus[cpu_idx].update_cpu_status(next_time, next_task)
+        
+        self.check_total_time(term_task_name, check_param, next_time)
+        running_same_task = term_task_name == next_task 
+        
+        if not running_same_task: self.insert_task_in_grq(term_task_name)
+        self.dispatch_classified_tasks()
         self.cpus[cpu_idx].current_time = next_time
         self.current_time = next_time
-        if term_task_name == None:
-            print("Terminated task is None")
-            exit()
-            return
+        '''
+        if term_flag: self.process_message(term_task_name, running_same_task)
+        if self.tasks[term_task_name].is_src and not running_same_task: self.insert_task_in_grq(term_task_name)
+        '''
+        if self.current_time >= self.max_time:
+            for cpu in self.cpus:
+                #fake event for update cpu status
+                cpu.update_cpu_status(self.current_time, cpu.running_task) 
+            self.gathered_rtl = self.gather_response_time()
+            for msg in self.gathered_msg:
+                print_message("Final message", msg)
+
+    def process_message(self, term_task_name, same_task_flag):
         term_task = self.tasks[term_task_name]
         successors = term_task.get_succ()
 
@@ -129,38 +145,37 @@ class SIMSYS(object):
             msg = term_task.generate_msg(self.current_time)
             print_message("Generate message",msg)
             succ.insert_msg(msg)
-            if succ.is_ready():
-                self.insert_task_in_grq(succ_name)
+            if succ.is_ready() and not same_task_flag:
+                print("?????????????", succ_name)
+                self.insert_task_in_grq(term_task_name)
 
         if term_task.is_sink():
             msg = term_task.save_msgs(self.current_time)
             print_message("Generate message",msg)
             self.gathered_msg.append(msg)
-        if term_task.is_src:
+        '''
+        if term_task.is_src and not same_task_flag: 
             self.insert_task_in_grq(term_task_name)
-
+        '''
         self.dispatch_classified_tasks()
         print("Current task:",term_task_name)
         print("Successor:",successors)
         input()
 
-        if self.current_time >= self.max_time:
-            for cpu in self.cpus:
-                #fake event for update cpu status
-                cpu.update_cpu_status(self.current_time, cpu.running_task) 
-                #cpu.print_status("after final update")
-            self.gathered_rtl = self.gather_response_time()
-            for msg in self.gathered_msg:
-                print_message("Final message", msg)
-
     def gather_response_time(self):
         ###
         ##Gather all cpu's response time list.
+        ##task_list is for debugging
         ###
-        gathered_list = []
+        task_list = {name: [] for name in self.tasks}
+        total_list = []
         for cpu in self.cpus:
-            gathered_list.extend(cpu.rtl)
-        return gathered_list
+            total_list.extend(cpu.cpu_rtl)
+            for task, list in cpu.task_rtl.items():
+                if not list == []:
+                    task_list[task] = list
+
+        return total_list#, task_list
 
     def create_task_set(self):
         ###
@@ -168,7 +183,7 @@ class SIMSYS(object):
         ###
         self.tasks = { } 
         for task in self.feats.keys():
-            ext_sample = self.sampling_ext(task)
+            ext_sample = sampling_ext(self.ext_table, task)
             task_obj = SIMTSK(task, ext_sample, self.graph, self.feats, self.current_time)
             #task_obj = task_attr(task, ext=ext_sample, ret=ext_sample, art=0, prd=self.feats[task].prd, cnt=0, off=self.feats[task].off, aff=self.feats[task].aff, rtd=0, stt='')
             self.tasks.update({task: task_obj})
@@ -182,31 +197,6 @@ class SIMSYS(object):
         for name, task in self.tasks.items():
             self.prios[name] = task.prd
 
-    def sampling_ext(self, name):
-        ###
-        ##Generate real number randomly.
-        ##And lookup sampling table.
-        ###
-        if not name in self.ext_table:
-            print("Define lookup table about", name)
-            exit()
-        
-        ext_sample = 0
-        real = random.random()
-        cml_prob = 0
-        #print(name)
-        for time, prob in self.ext_table[name]:
-            cml_prob = cml_prob + prob
-            if max(real, cml_prob) != real:
-                ext_sample = time
-                break
-        
-        if cml_prob > 1 or ext_sample == 0:
-            print("total probability is not 1 about", name)
-            exit()
-
-        return ext_sample
-
     def insert_task_in_grq(self, name):
         if not name in self.tasks.keys():
             print(name, "is not in task_set")
@@ -214,3 +204,14 @@ class SIMSYS(object):
         self.global_rq.append(name)
         update_task_status(name, self.tasks[name].art, self.tasks, 'ready')
         self.global_rq.sort(key=lambda i : self.tasks[i].off + (self.tasks[i].prd * self.tasks[i].cnt))
+
+    def check_total_time(self, name, param, next_t):
+        ###
+        ##Compare task's total produced time and consumed time.
+        ###
+        cons_time, capture_ret = param
+        curr_prod = min(next_t - self.current_time, capture_ret)
+        self.total_prod[name] = self.total_prod[name] + curr_prod
+        if not self.total_prod[name] == cons_time:
+            print("Total produced", self.total_prod[name], ",Total comsumed:",cons_time,":", name)
+            exit()

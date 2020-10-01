@@ -6,7 +6,7 @@ import util as util
 task_feat = recordtype("task_feat", 'prd, off, aff')
 
 cur_time = 0
-max_time = 50
+max_time = 100
 ncpus = 1
 
 task_graph = {
@@ -23,28 +23,16 @@ feature_set = {
 }
 
 ext_table = {
-    'task_A': [ (5, 1), ],
-    'task_B': [ (5, 1), ],
-    'task_C': [ (5, 1), ],
+    'task_A': [0, 0.1, 0.1, 0, 0.2, 0.3, 0.2, 0.1],
+    'task_B': [0, 0.1, 0.1, 0.3, 0.1, 0.2, 0.1, 0.1],
+    'task_C': [0, 0.1, 0.3, 0.3, 0.2, 0.1],
 }
-'''
+
 ext_table = {
-    'task_A': [ (3, 0.25), 
-                (5, 0.5),
-                (9, 0.25)],
-    'task_B': [ (1, 0.2), 
-                (2, 0.2), 
-                (3, 0.2), 
-                (4, 0.2), 
-                (5, 0.2)],
-    'task_C': [ (2, 0.125), 
-                (4, 0.125), 
-                (6, 0.25), 
-                (8, 0.25), 
-                (10, 0.125), 
-                (11, 0.125)]
+    'task_A': [0, 1],
+    'task_B': [0, 0, 1],
+    'task_C': [0, 0, 0, 1],
 }
-'''
 
 def sys_simulation():
     simsys = SIMSYS(ncpus, feature_set, ext_table, task_graph, cur_time, max_time)

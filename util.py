@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import random
 
 ###########################################
 # utilities for printing
@@ -49,3 +50,26 @@ def update_task_status(task_name, arrival_time, tasks, status):
     task.set_stt(status)
     task.set_art(arrival_time)
     return task_name
+
+def sampling_ext(table, name):
+    ###
+    ##Generate real number randomly.
+    ##And lookup sampling table.
+    ###
+    if not name in table:
+        print("Define lookup table about", name)
+        exit()
+    if sum(table[name]) >1:
+        print(name, "'s total probaility is over 1")
+        exit()
+    ext_sample = 0
+    real = random.random()
+    cml_prob = 0
+    #print(name)
+    for time, prob in enumerate(table[name]):
+        cml_prob = cml_prob + prob
+        cml_prob = round(cml_prob, 10)
+        if max(real, cml_prob) != real:
+            ext_sample = time
+            break
+    return ext_sample

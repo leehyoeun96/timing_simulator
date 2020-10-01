@@ -1,20 +1,23 @@
 from util import *
-from recordtype import recordtype
+#from recordtype import recordtype
 import random
    
 class SIMCPU(object):
-    def __init__(self, cpu_idx, prio_set, task_set, lookup_table, task_graph, cur_time, max_time):
+    def __init__(self, cpu_idx, prio_set, task_set, ext_table, task_graph, cur_time, max_time):
         self.icpu = cpu_idx
         self.running_task = ''
         self.local_rq = list()
 
-        self.rtl = list()
+        self.cpu_rtl = list()
         self.prios = prio_set
         self.tasks = task_set
-        self.lut = lookup_table
+        self.ext_table = ext_table
         self.graph = task_graph
         self.current_time = cur_time
         self.max_time = max_time
+
+        self.total_cons = {name: 0 for name in self.tasks}
+        self.task_rtl = {name: [] for name in self.tasks}
 
     def initialize_cpu(self):
         ###
@@ -86,33 +89,35 @@ class SIMCPU(object):
             print("CPU", self.icpu, "The next task is not in task set:", next_task)
             exit()
         if next_off < 0:
-            print("CPU", self.icpu, "It seems strange...next offset is negative value", next_off)
+            print("CPU", self.icpu, "Next offset is negative value", next_off)
             exit()
         
         term_task = self.running_task
+        term_flag = False
+        saved_ret = self.tasks[term_task].ret
         if next_off < self.tasks[term_task].ret: #Occur preemption
             print("occur preemption!")
+            self.total_cons[term_task] = self.total_cons[term_task] + next_off
+
             self.tasks[term_task].set_ret(self.tasks[term_task].ret - next_off)
         else:
             #print("terminate normally")
-            self.rtl = self.tasks[term_task].calculate_response_time(self.rtl)
-            next_ext = self.sampling_ext(term_task)
+            term_flag = True
+            self.total_cons[term_task] = self.total_cons[term_task] + self.tasks[term_task].ret
+
+            self.cpu_rtl.append(self.tasks[term_task].calculate_response_time(self.task_rtl[term_task]))
+            next_ext = sampling_ext(self.ext_table, term_task)
             self.tasks[term_task].set_ext(next_ext)
             self.tasks[term_task].set_ret(self.tasks[term_task].ext)
             self.tasks[term_task].set_cnt(self.tasks[term_task].cnt + 1)
-        '''
-        if next_task in self.local_rq:
-            self.local_rq.remove(next_task)
-        '''
-        self.running_task = update_task_status(next_task, next_evt, self.tasks, 'run')
         
-        if term_task == next_task:
-            #print("Same task as the previous task is running")
-            term_task = None
-        else:
+        self.running_task = update_task_status(next_task, next_evt, self.tasks, 'run')
+
+        if not term_task == next_task:
             self.local_rq.remove(next_task)
 
-        return term_task
+        check_param  = (self.total_cons[term_task], saved_ret)
+        return term_task, term_flag, check_param
 
     def print_status(self, command):
         ###
@@ -121,27 +126,6 @@ class SIMCPU(object):
         print_cpu_status("CPU status "+command, self.running_task, self.icpu)
         print_task_status("Task status "+command, self.tasks)
         print_queue("Queue status "+command, self.local_rq)
-
-    def sampling_ext(self, name):
-        ###
-        ##Generate real number randomly.
-        ##And lookup sampling table.
-        ###
-        if not name in self.lut:
-            print("Define lookup table about", name)
-            exit()
-        
-        ext_sample = 0
-        real = random.random()
-        cml_prob = 0
-        #print(name)
-        for time, prob in self.lut[name]:
-            cml_prob = cml_prob + prob
-            if max(real, cml_prob) != real or cml_prob == 1:
-                ext_sample = time
-                break
-        
-        return ext_sample
 
     def insert_task_in_lrq(self, name):
         if not name in self.tasks.keys():

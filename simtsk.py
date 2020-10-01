@@ -3,14 +3,9 @@ import time
 import copy
 from util import *
 
+message = recordtype("message", 'src, id, start, end')
 class SIMTSK(object):
     def __init__(self, name, ext, task_graph, task_features, sys_time):
-        #self.msg_q = list()
-        self.msg_q = []
-        self.graph = task_graph
-        self.feats = task_features
-        self.stand_time = sys_time
-        self.is_src = False
         ##task attribute
         self.name = name
         self.ext = ext
@@ -22,6 +17,13 @@ class SIMTSK(object):
         self.aff = task_features[name].aff
         self.rtd = 0
         self.stt = ''
+        
+        self.msg_q = list()
+        self.graph = task_graph
+        self.feats = task_features
+        self.stand_time = sys_time
+        self.is_src = not self.get_pred()
+
 
     def get_pred(self):
         pred =[]
@@ -34,6 +36,9 @@ class SIMTSK(object):
         if 'task_0' in task_graph[self.name]:
             return []
         else: return task_graph[self.name]
+
+    def is_sink(self):
+        return self.get_succ() == []
 
     def is_ready(self):
         pred_list = self.get_pred()
@@ -65,7 +70,6 @@ class SIMTSK(object):
 
     def generate_msg(self, curr_time):
         succ_list = self.get_succ()
-        self.is_src = not self.get_pred()
         msg = message(src = [], id = [], start = [], end = 0)
         now = curr_time
         if self.is_src:
@@ -87,9 +91,6 @@ class SIMTSK(object):
         msg.end = now
         self.stand_time = now
         return msg
-
-    def is_sink(self):
-        return self.get_succ() == []
 
     def save_msgs(self, curr_time):
         if not self.is_sink():
@@ -115,10 +116,10 @@ class SIMTSK(object):
         print("response time", self.rtd)
         print("*******************************")
         if self.rtd< 0:
-            print("It seems strange... response time is negative value")
+            print("Response time is negative value")
             exit()
         response_list.append(self.rtd)
-        return response_list
+        return self.rtd
     
     def set_ext(self, new_ext):
         self.ext = new_ext
@@ -132,10 +133,10 @@ class SIMTSK(object):
         self.stt = new_stt
 
 
-
+##################
 ##For Test_Main##
+##################
 task_feat = recordtype("task_feat", 'ext, prd, off, aff')
-message = recordtype("message", 'src, id, start, end')
 feature_set = {
     'task_A': task_feat(ext=10,prd=25, off=0, aff=0),
     'task_B': task_feat(ext=5, prd=25, off=0, aff=0),
