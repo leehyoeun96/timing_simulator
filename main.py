@@ -43,6 +43,7 @@ def sys_simulation():
         cpu_idx, next_evt = simsys.find_min_event_time()
         simsys.update_system_status(cpu_idx, next_evt)
         simsys.cpus[cpu_idx].print_status("")
+        input()
     return simsys.gathered_rtl
 
 response_time_list = sys_simulation()
