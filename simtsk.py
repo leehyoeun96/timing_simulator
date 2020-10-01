@@ -49,7 +49,8 @@ class SIMTSK(object):
             if not any(pred in msg.src for msg in self.msg_q):
                 ready_flag = False
 
-        print(self.name,"is ready?:", ready_flag)
+        #print(self.name,"is ready?:", ready_flag)
+        return ready_flag
 
     def merge_msg(self):
         msg = message(src = [], id = [], start = [], end = 0)
@@ -112,7 +113,7 @@ class SIMTSK(object):
         print("task name: ",self.name)
         print("latest arrival time",self.art)
         print("release time", release_time)
-        print("remainig excution time", self.ret)
+        print("remaining excution time", self.ret)
         print("response time", self.rtd)
         print("*******************************")
         if self.rtd< 0:

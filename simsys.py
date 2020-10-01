@@ -45,8 +45,8 @@ class SIMSYS(object):
 
         self.create_task_set()        
         for task in self.tasks.values():
-            #if task.is_ready():
-           self.insert_task_in_grq(task.name)
+            if task.is_ready():
+                self.insert_task_in_grq(task.name)
         self.initialize_cpus()
 
     def initialize_cpus(self):
@@ -61,6 +61,55 @@ class SIMSYS(object):
             print("---------------------------")
             self.current_time = self.cpus[cpu_idx].initialize_cpu()
             self.cpus[cpu_idx].print_status(" after initialize")
+       
+    def find_min_event_time(self):
+        ###
+        ##Find minimum event time among all cpus.
+        ###
+        min_event = ()
+        if not self.cpus:
+            print("There's no running cpu")
+            exit()
+        
+        for cpu in self.cpus:
+            term_flag, term_task_name = cpu.is_terminated()
+            if term_flag: self.insert_ready_successors(term_task_name)
+            next_event = cpu.find_min_event_time()
+            
+            if not next_event: 
+                print("There's no running task in CPU", cpu.icpu)
+                continue
+            if not min_event:
+                min_event = next_event
+                evt_cpu_idx = cpu.icpu
+            elif min_event > next_event: 
+                min_event = next_event
+                evt_cpu_idx = cpu.icpu
+
+        return evt_cpu_idx, min_event
+
+    def update_system_status(self, cpu_idx, next_event):
+        ###
+        ##Update cpu determined by index with next event time and task.
+        ##Also, update global queue and local queue with terminated task.
+        ##Finally, update time of system and the cpu.
+        ###
+        next_time, next_task = next_event
+        term_task_name, check_param = self.cpus[cpu_idx].update_cpu_status(next_time, next_task)
+        self.check_total_time(term_task_name, check_param, next_time)
+        running_same_task = term_task_name == next_task 
+        self.current_time = next_time
+
+        if self.tasks[term_task_name].is_src and not running_same_task: self.insert_task_in_grq(term_task_name)
+        self.dispatch_classified_tasks()
+        
+        if self.current_time >= self.max_time:
+            for cpu in self.cpus:
+                #fake event for update cpu status
+                cpu.update_cpu_status(self.current_time, cpu.running_task) 
+            self.gathered_rtl = self.gather_response_time()
+            for msg in self.gathered_msg:
+                print_message("Final message", msg)
  
     def dispatch_classified_tasks(self):
         ###
@@ -83,60 +132,20 @@ class SIMSYS(object):
                 exit()
             for name in tasks:
                 self.cpus[affi].insert_task_in_lrq(name)
+ 
+    def insert_ready_successors(self, term_task_name):
+        self.process_message(term_task_name)
 
-    def find_min_event_time(self):
-        ###
-        ##Find minimum event time among all cpus.
-        ###
-        min_event = ()
-        if not self.cpus:
-            print("There's no running cpu")
-            exit()
+        term_task = self.tasks[term_task_name]
+        successors = term_task.get_succ()
+        for succ_name in successors:
+            succ = self.tasks[succ_name]
+            if succ.prd == term_task.prd and succ.is_ready():
+                self.insert_task_in_grq(succ_name)
 
-        for cpu in self.cpus:
-            next_event = cpu.find_min_event_time()
-            #print(next_event)
-            if not next_event: 
-                print("There's no running task in CPU", cpu.icpu)
-                continue
-            if not min_event:
-                min_event = next_event
-                evt_cpu_idx = cpu.icpu
-            elif min_event > next_event: 
-                min_event = next_event
-                evt_cpu_idx = cpu.icpu
-
-        return evt_cpu_idx, min_event
-
-    def update_system_status(self, cpu_idx, next_event):
-        ###
-        ##Update cpu determined by index with next event time and task.
-        ##Also, update global queue and local queue with terminated task.
-        ##Finally, update time of system and the cpu.
-        ###
-        next_time, next_task = next_event
-        term_task_name, term_flag, check_param = self.cpus[cpu_idx].update_cpu_status(next_time, next_task)
-        
-        self.check_total_time(term_task_name, check_param, next_time)
-        running_same_task = term_task_name == next_task 
-        
-        if not running_same_task: self.insert_task_in_grq(term_task_name)
         self.dispatch_classified_tasks()
-        self.cpus[cpu_idx].current_time = next_time
-        self.current_time = next_time
-        '''
-        if term_flag: self.process_message(term_task_name, running_same_task)
-        if self.tasks[term_task_name].is_src and not running_same_task: self.insert_task_in_grq(term_task_name)
-        '''
-        if self.current_time >= self.max_time:
-            for cpu in self.cpus:
-                #fake event for update cpu status
-                cpu.update_cpu_status(self.current_time, cpu.running_task) 
-            self.gathered_rtl = self.gather_response_time()
-            for msg in self.gathered_msg:
-                print_message("Final message", msg)
-
-    def process_message(self, term_task_name, same_task_flag):
+ 
+    def process_message(self, term_task_name):
         term_task = self.tasks[term_task_name]
         successors = term_task.get_succ()
 
@@ -145,9 +154,6 @@ class SIMSYS(object):
             msg = term_task.generate_msg(self.current_time)
             print_message("Generate message",msg)
             succ.insert_msg(msg)
-            if succ.is_ready() and not same_task_flag:
-                print("?????????????", succ_name)
-                self.insert_task_in_grq(term_task_name)
 
         if term_task.is_sink():
             msg = term_task.save_msgs(self.current_time)
@@ -157,10 +163,6 @@ class SIMSYS(object):
         if term_task.is_src and not same_task_flag: 
             self.insert_task_in_grq(term_task_name)
         '''
-        self.dispatch_classified_tasks()
-        print("Current task:",term_task_name)
-        print("Successor:",successors)
-        input()
 
     def gather_response_time(self):
         ###

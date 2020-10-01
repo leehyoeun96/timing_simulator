@@ -48,10 +48,9 @@ class SIMCPU(object):
         if not self.running_task:
             print("CPU",self.icpu,": There's no running task")
             return None
-
+        
         run_task = self.running_task
         terminate_t = self.tasks[run_task].art + self.tasks[run_task].ret
-        
         for ready_task in self.local_rq:
             release_t = (self.tasks[ready_task].prd * self.tasks[ready_task].cnt) + self.tasks[ready_task].off
             ##Is it really used?
@@ -71,7 +70,7 @@ class SIMCPU(object):
         next_task = run_task
         next_evt = max(release_t, terminate_t)
         next_evt_list.append((next_evt,next_task))
-        
+
         min_next_evt = min(next_evt_list)
         
         return min_next_evt
@@ -92,32 +91,49 @@ class SIMCPU(object):
             print("CPU", self.icpu, "Next offset is negative value", next_off)
             exit()
         
-        term_task = self.running_task
-        term_flag = False
-        saved_ret = self.tasks[term_task].ret
-        if next_off < self.tasks[term_task].ret: #Occur preemption
-            print("occur preemption!")
-            self.total_cons[term_task] = self.total_cons[term_task] + next_off
-
-            self.tasks[term_task].set_ret(self.tasks[term_task].ret - next_off)
+        term_task_name = self.running_task
+        term_task = self.tasks[term_task_name]
+        saved_ret = term_task.ret
+        if next_off < term_task.ret: #Occur preemption
+            #print("occur preemption!")
+            self.total_cons[term_task_name] = self.total_cons[term_task_name] + next_off
+            term_task.set_ret(term_task.ret - next_off)
         else:
             #print("terminate normally")
-            term_flag = True
-            self.total_cons[term_task] = self.total_cons[term_task] + self.tasks[term_task].ret
+            self.total_cons[term_task_name] = self.total_cons[term_task_name] + term_task.ret
 
-            self.cpu_rtl.append(self.tasks[term_task].calculate_response_time(self.task_rtl[term_task]))
-            next_ext = sampling_ext(self.ext_table, term_task)
-            self.tasks[term_task].set_ext(next_ext)
-            self.tasks[term_task].set_ret(self.tasks[term_task].ext)
-            self.tasks[term_task].set_cnt(self.tasks[term_task].cnt + 1)
+            self.cpu_rtl.append(term_task.calculate_response_time(self.task_rtl[term_task_name]))
+            next_ext = sampling_ext(self.ext_table, term_task_name)
+            term_task.set_ext(next_ext)
+            term_task.set_ret(term_task.ext)
+            term_task.set_cnt(term_task.cnt + 1)
         
+        update_task_status(term_task_name, term_task.art, self.tasks, 'wait')
         self.running_task = update_task_status(next_task, next_evt, self.tasks, 'run')
+        self.current_time = next_evt
 
-        if not term_task == next_task:
+        if next_task in self.local_rq:
             self.local_rq.remove(next_task)
 
-        check_param  = (self.total_cons[term_task], saved_ret)
-        return term_task, term_flag, check_param
+        check_param  = (self.total_cons[term_task_name], saved_ret)
+        return term_task_name, check_param
+
+    def is_terminated(self):
+        run_task = self.running_task
+        ##running task must needed
+        if not run_task:
+            print("CPU",self.icpu,": There's no running task")
+            return None
+
+        terminate_t = self.tasks[run_task].art + self.tasks[run_task].ret
+        term_flag = False
+        for ready_task in self.local_rq:
+            release_t = (self.tasks[ready_task].prd * self.tasks[ready_task].cnt) + self.tasks[ready_task].off
+            if self.prios[run_task] <= self.prios[ready_task] or terminate_t <= release_t:
+                term_flag = True
+
+        print(run_task, "is terminated?:", term_flag)
+        return term_flag, run_task
 
     def print_status(self, command):
         ###
