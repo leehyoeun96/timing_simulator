@@ -25,7 +25,6 @@ class SIMTSK(object):
         self.is_src = not self.get_pred()
         self.msg_id = 0
 
-
     def get_pred(self):
         pred =[]
         for key, value in self.graph.items():
@@ -101,7 +100,6 @@ class SIMTSK(object):
         if not self.is_sink():
             print("ERROR: This is not sink node")
             exit()
-        print("Save messages")
         msg = self.merge_msg()
         self.msg_q = []
         msg.end = curr_time + ret
@@ -113,13 +111,14 @@ class SIMTSK(object):
     def calculate_response_time(self, response_list):
         release_time = (self.prd * self.cnt) + self.off
         self.rtd = self.art - release_time + self.ret
+        print("********Response time**********")
+        print("  task name:",self.name)
+        print("  latest arrival time:",self.art)
+        print("  remaining excution time:", self.ret)
+        print("  release time:", release_time)
+        print("  response time:", self.rtd)
         print("*******************************")
-        print("task name: ",self.name)
-        print("latest arrival time",self.art)
-        print("release time", release_time)
-        print("remaining excution time", self.ret)
-        print("response time", self.rtd)
-        print("*******************************")
+        print()
         if self.rtd< 0:
             print("Response time is negative value")
             exit()

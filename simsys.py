@@ -58,7 +58,7 @@ class SIMSYS(object):
         self.dispatch_classified_tasks()
 
         for cpu_idx in range(self.ncpus):
-            print("---------------------------")
+            print("........................")
             self.current_time = self.cpus[cpu_idx].initialize_cpu()
             self.cpus[cpu_idx].print_status(" after initialize")
        
@@ -108,8 +108,6 @@ class SIMSYS(object):
                 #fake event for update cpu status
                 cpu.update_cpu_status(self.current_time, cpu.running_task) 
             self.gathered_rtl = self.gather_response_time()
-            for msg in self.gathered_msg:
-                print_message(msg)
  
     def dispatch_classified_tasks(self):
         ###

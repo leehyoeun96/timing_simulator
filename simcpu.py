@@ -66,10 +66,12 @@ class SIMCPU(object):
             next_evt_list.append((next_evt,next_task))
         
         #include running task to next event candidates
-        release_t = (self.tasks[run_task].prd * (self.tasks[run_task].cnt+1)) + self.tasks[run_task].off
-        next_task = run_task
-        next_evt = max(release_t, terminate_t)
-        next_evt_list.append((next_evt,next_task))
+        
+        if self.tasks[run_task].is_ready():
+            release_t = (self.tasks[run_task].prd * (self.tasks[run_task].cnt+1)) + self.tasks[run_task].off
+            next_task = run_task
+            next_evt = max(release_t, terminate_t)
+            next_evt_list.append((next_evt,next_task))
 
         min_next_evt = min(next_evt_list)
         
@@ -95,7 +97,7 @@ class SIMCPU(object):
         term_task = self.tasks[term_task_name]
         saved_ret = term_task.ret
         if next_off < term_task.ret: #Occur preemption
-            print("occur preemption!")
+            #print("occur preemption!")
             self.total_cons[term_task_name] = self.total_cons[term_task_name] + next_off
             term_task.set_ret(term_task.ret - next_off)
         else:
@@ -132,7 +134,7 @@ class SIMCPU(object):
             if not(self.prios[run_task] <= self.prios[ready_task] or terminate_t <= release_t):
                 term_flag = False
 
-        print(run_task, "is terminated?:", term_flag)
+        #print(run_task, "is terminated?:", term_flag)
         return term_flag, run_task
 
     def print_status(self, command):

@@ -26,12 +26,12 @@ def print_task_status(comment, task_set):
     print()
 
 def print_message(msg):
-    print("###############################")
+    print("----------Message-----------")
     print("  sources:", msg.src)
-    print("  msg_ids:", msg.id)
-    print("  start_t:", msg.start)
-    print("  end_time:", msg.end)
-    print("###############################")
+    print("  msg ids:", msg.id)
+    print("  start time:", msg.start)
+    print("  end time:", msg.end)
+    print("----------------------------")
 
 def show_response_time(response_time):
     if len(response_time) == 0:
