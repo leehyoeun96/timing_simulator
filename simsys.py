@@ -149,20 +149,14 @@ class SIMSYS(object):
 
         for succ_name in successors:
             succ = self.tasks[succ_name]
-            #print("????????????????",self.current_time)
-            #input()
-            msg = term_task.generate_msg(self.current_time, term_task.ret)
+            msg = term_task.generate_msg(self.current_time + term_task.ret)
             print_message(msg)
             succ.insert_msg(msg)
 
         if term_task.is_sink():
-            msg = term_task.save_msgs(self.current_time, term_task.ret)
+            msg = term_task.save_msgs(self.current_time + term_task.ret)
             print_message(msg)
             self.gathered_msg.append(msg)
-        '''
-        if term_task.is_src and not same_task_flag: 
-            self.insert_task_in_grq(term_task_name)
-        '''
 
     def gather_response_time(self):
         ###
@@ -186,7 +180,7 @@ class SIMSYS(object):
         self.tasks = { } 
         for task in self.feats.keys():
             ext_sample = sampling_ext(self.ext_table, task)
-            task_obj = SIMTSK(task, ext_sample, self.graph, self.feats, self.current_time)
+            task_obj = SIMTSK(task, ext_sample, self.graph, self.feats)
             #task_obj = task_attr(task, ext=ext_sample, ret=ext_sample, art=0, prd=self.feats[task].prd, cnt=0, off=self.feats[task].off, aff=self.feats[task].aff, rtd=0, stt='')
             self.tasks.update({task: task_obj})
         print_task_status(" after create task set",self.tasks)

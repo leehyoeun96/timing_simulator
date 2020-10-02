@@ -66,7 +66,6 @@ class SIMCPU(object):
             next_evt_list.append((next_evt,next_task))
         
         #include running task to next event candidates
-        
         if self.tasks[run_task].is_ready():
             release_t = (self.tasks[run_task].prd * (self.tasks[run_task].cnt+1)) + self.tasks[run_task].off
             next_task = run_task

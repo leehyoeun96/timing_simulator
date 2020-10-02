@@ -5,7 +5,7 @@ from util import *
 
 message = recordtype("message", 'src, id, start, end')
 class SIMTSK(object):
-    def __init__(self, name, ext, task_graph, task_features, sys_time):
+    def __init__(self, name, ext, task_graph, task_features):
         ##task attribute
         self.name = name
         self.ext = ext
@@ -21,7 +21,6 @@ class SIMTSK(object):
         self.msg_q = list()
         self.graph = task_graph
         self.feats = task_features
-        self.stand_time = sys_time
         self.is_src = not self.get_pred()
         self.msg_id = 0
 
@@ -33,9 +32,9 @@ class SIMTSK(object):
         return pred
 
     def get_succ(self):
-        if 'task_0' in task_graph[self.name]:
+        if 'task_0' in self.graph[self.name]:
             return []
-        else: return task_graph[self.name]
+        else: return self.graph[self.name]
 
     def is_sink(self):
         return self.get_succ() == []
@@ -52,7 +51,7 @@ class SIMTSK(object):
         #print(self.name,"is ready?:", ready_flag)
         return ready_flag
 
-    def merge_msg(self):
+    def merge_msg(self, now):
         msg = message(src = [], id = [], start = [], end = 0)
         for recv_msg in self.msg_q:
             for recv_idx, recv_src in enumerate(recv_msg.src):
@@ -67,44 +66,38 @@ class SIMTSK(object):
                     msg.start[orig_idx] = recv_msg.start[recv_idx]
                     msg.id[orig_idx] = recv_msg.id[recv_idx]
                 #else: print("Received message is out of date.")
-
+        self.msg_q = []
+        msg.end = now
         return msg
 
-    def generate_msg(self, curr_time, ret):
-        release_time = (self.prd * self.cnt) + self.off
-        succ_list = self.get_succ()
-        msg = message(src = [], id = [], start = [], end = 0)
-        now = curr_time
-        now = now + ret
+    def generate_msg(self, now):
         if self.is_src:
-            msg = message(src = [self.name], id = [self.msg_id], start = [release_time], end = now )
-            self.msg_id = self.msg_id + 1
-            self.stand_time = curr_time
-            return msg
-        
-        msg = self.merge_msg()
-        
+            return self.generate_new_msg(now)
+
+        msg = self.merge_msg(now)
         length = len(msg.src)
         if any(len(lst) != length for lst in [msg.id, msg.start]):
             print("Wrong message generated.")
             exit()
-        if len(self.msg_q) == 0:
-            print("Receive 0 message")
-            exit()
-
-        msg.end = now
-        self.stand_time = now
         return msg
 
-    def save_msgs(self, curr_time, ret):
+    def save_msgs(self, now):
         if not self.is_sink():
             print("ERROR: This is not sink node")
             exit()
-        msg = self.merge_msg()
-        self.msg_q = []
-        msg.end = curr_time + ret
+
+        if not len(self.msg_q) == 0:
+            msg = self.merge_msg(now)
+        else:
+            msg = self.generate_new_msg(now)
         return msg
-    
+
+    def generate_new_msg(self, now):
+        release_time = (self.prd * self.cnt) + self.off
+        msg = message(src = [self.name], id = [self.msg_id], start = [release_time], end = now)
+        self.msg_id = self.msg_id + 1
+        return msg
+
     def insert_msg(self, msg):
         self.msg_q.append(msg)
 
