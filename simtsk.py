@@ -16,12 +16,12 @@ class SIMTSK(object):
         self.off = task_features[name].off
         self.aff = task_features[name].aff
         self.rtd = 0
-        self.stt = ''
+        self.stt = 'wait'
         
         self.msg_q = list()
+        self.ready_msg_q = list()
         self.graph = task_graph
         self.feats = task_features
-        self.is_src = not self.get_pred()
         self.msg_id = 0
 
     def get_pred(self):
@@ -30,30 +30,42 @@ class SIMTSK(object):
             if (key != 'task_0') and (self.name in value) and (self.feats[key].prd == self.prd):
                 pred.append(key)
         return pred
-
+        
     def get_succ(self):
         if 'task_0' in self.graph[self.name]:
             return []
         else: return self.graph[self.name]
 
+    def is_src(self):
+        flag = False
+        if not 'task_0' in self.graph:
+            print("Task graph must need key, 'task_0'")
+            exit()
+        src_list = self.graph['task_0']
+        if self.name in src_list:
+            flag= True
+        return flag
+    
     def is_sink(self):
         return self.get_succ() == []
 
     def is_ready(self):
         pred_list = self.get_pred()
-        #print(self.name,":", pred_list)
         ready_flag = True
+        subs_list = []
+        subs_list.extend(self.msg_q)
+        subs_list.extend(self.ready_msg_q)
         for pred in pred_list:
-            #print(pred)
-            if not any(pred in msg.src for msg in self.msg_q):
+            if not any(pred in msg.src for msg in subs_list):
                 ready_flag = False
-
-        #print(self.name,"is ready?:", ready_flag)
+        if not len(self.msg_q) == 0:
+            self.ready_msg_q.extend(self.msg_q)
+            self.msg_q = []
         return ready_flag
 
     def merge_msg(self, now):
         msg = message(src = [], id = [], start = [], end = 0)
-        for recv_msg in self.msg_q:
+        for recv_msg in self.ready_msg_q:
             for recv_idx, recv_src in enumerate(recv_msg.src):
                 if not recv_src in msg.src:
                     msg.src.append(recv_src)
@@ -66,30 +78,24 @@ class SIMTSK(object):
                     msg.start[orig_idx] = recv_msg.start[recv_idx]
                     msg.id[orig_idx] = recv_msg.id[recv_idx]
                 #else: print("Received message is out of date.")
-        self.msg_q = []
+        self.ready_msg_q = []
         msg.end = now
         return msg
 
     def generate_msg(self, now):
-        if self.is_src:
-            return self.generate_new_msg(now)
-
-        msg = self.merge_msg(now)
-        length = len(msg.src)
-        if any(len(lst) != length for lst in [msg.id, msg.start]):
-            print("Wrong message generated.")
-            exit()
-        return msg
-
-    def save_msgs(self, now):
-        if not self.is_sink():
-            print("ERROR: This is not sink node")
-            exit()
-
-        if not len(self.msg_q) == 0:
-            msg = self.merge_msg(now)
-        else:
+        if self.is_src() or len(self.ready_msg_q) == 0:
+            print("Source or first task:",self.name)
             msg = self.generate_new_msg(now)
+        else:
+            print("Sink or intermidiate task:",self.name)
+            msg = self.merge_msg(now)
+        
+        if any(len(lst) != len(msg.src) for lst in [msg.id, msg.start]):
+            print("Wrong message is generated.")
+            exit()
+        if any(msg.end <= start for start in msg.start):
+            print("End",msg.end,"is earlier than start",msg.start)
+            exit()
         return msg
 
     def generate_new_msg(self, now):
@@ -104,14 +110,8 @@ class SIMTSK(object):
     def calculate_response_time(self, response_list):
         release_time = (self.prd * self.cnt) + self.off
         self.rtd = self.art - release_time + self.ret
-        print("********Response time**********")
-        print("  task name:",self.name)
-        print("  latest arrival time:",self.art)
-        print("  remaining excution time:", self.ret)
-        print("  release time:", release_time)
-        print("  response time:", self.rtd)
-        print("*******************************")
-        print()
+        print_response_time("Response time", self, release_time)
+        
         if self.rtd< 0:
             print("Response time is negative value")
             exit()
@@ -129,7 +129,22 @@ class SIMTSK(object):
     def set_stt(self, new_stt):
         self.stt = new_stt
 
+    def save_msgs(self, now):
+        if not self.is_sink():
+            print("ERROR: This is not a sink node")
+            exit()
 
+        if not len(self.msg_q) == 0:
+            msg = self.merge_msg(now)
+        else:
+            msg = self.generate_new_msg(now)
+        if any(msg.end <= start for start in msg.start):
+            print("End is earlier than start")
+            exit()
+        return msg
+
+
+'''
 ##################
 ##For Test_Main##
 ##################
@@ -152,12 +167,16 @@ msg2 = message(src = ['task_A', 'task_C'], id = [2,2], start = [2,2], end = 1 )
 ##################
 
 def Test_Main():
-    taskB = SIMTSK('task_B', 5, task_graph, feature_set, time.time())
-    taskC = SIMTSK('task_C', 5, task_graph, feature_set, time.time())
+    taskB = SIMTSK('task_B', 5, task_graph, feature_set)
+    taskC = SIMTSK('task_C', 5, task_graph, feature_set)
     taskB.msg_q = [msg1, msg2]
     taskC.msg_q = [msg1, msg2]
+    p = taskC.get_pred()
+    print(p)
     print_message(taskB.generate_msg())
     for msg in taskC.save_msgs():
         print_message(msg)
 
-#Test_Main()
+
+Test_Main()
+'''

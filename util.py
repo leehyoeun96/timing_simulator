@@ -25,6 +25,16 @@ def print_task_status(comment, task_set):
         print("  execution time:", task.ext)
     print()
 
+def print_response_time(comment, task, release_t):
+    print("**********",comment,"**********")
+    print("  task name:",task.name)
+    print("  latest arrival time:",task.art)
+    print("  remaining excution time:", task.ret)
+    print("  release time:", release_t)
+    print("  response time:", task.rtd)
+    print("*******************************")
+    print()
+
 def print_message(msg):
     print("----------Message-----------")
     print("  sources:", msg.src)

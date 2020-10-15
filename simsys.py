@@ -1,24 +1,9 @@
 from util import *
 from simcpu import *
 from simtsk import *
-#from recordtype import recordtype
-#import random
-
-#task_attr = recordtype("task_attr", 'name, ext, ret, art, prd, cnt, off, aff, rtd, stt')
-'''
-ext = excution time
-ret = remaining excution time
-art = latest arrival time
-prd = period
-cnt = period count
-off = offset
-aff = affinity
-rtd = response time distribution
-stt = status
-'''
 
 class SIMSYS(object):
-    def __init__(self, ncpus, feat_set, ext_table, task_graph, cur_time, max_time):
+    def __init__(self, ncpus, feat_set, ext_table, task_graph, max_time):
         self.ncpus = ncpus
         self.cpus = [list() for i in range(ncpus)]
         self.global_rq = list()
@@ -29,7 +14,7 @@ class SIMSYS(object):
         self.feats = feat_set
         self.ext_table = ext_table
         self.graph = task_graph
-        self.current_time = cur_time
+        self.current_time = 0
         self.max_time = max_time
 
         self.total_prod = {name: 0 for name in self.feats}
@@ -61,7 +46,7 @@ class SIMSYS(object):
             print("........................")
             self.current_time = self.cpus[cpu_idx].initialize_cpu()
             self.cpus[cpu_idx].print_status(" after initialize")
-       
+     
     def find_min_event_time(self):
         ###
         ##Find minimum event time among all cpus.
@@ -99,8 +84,7 @@ class SIMSYS(object):
         self.check_total_time(term_task_name, check_param, next_time)
         running_same_task = term_task_name == next_task 
         self.current_time = next_time
-
-        if self.tasks[term_task_name].is_src and not running_same_task: self.insert_task_in_grq(term_task_name)
+        if self.tasks[term_task_name].is_src() and not running_same_task: self.insert_task_in_grq(term_task_name)
         self.dispatch_classified_tasks()
         
         if self.current_time >= self.max_time:
@@ -108,7 +92,7 @@ class SIMSYS(object):
                 #fake event for update cpu status
                 cpu.update_cpu_status(self.current_time, cpu.running_task) 
             self.gathered_rtl = self.gather_response_time()
- 
+
     def dispatch_classified_tasks(self):
         ###
         ##Classify task by it's affinity and dispatch to local run queue
@@ -130,7 +114,7 @@ class SIMSYS(object):
                 exit()
             for name in tasks:
                 self.cpus[affi].insert_task_in_lrq(name)
- 
+
     def insert_ready_successors(self, term_task_name):
         self.process_message(term_task_name)
 
@@ -138,30 +122,29 @@ class SIMSYS(object):
         successors = term_task.get_succ()
         for succ_name in successors:
             succ = self.tasks[succ_name]
-            if succ.prd == term_task.prd and succ.is_ready():
+            if succ.is_ready():
+                #print(term_task_name == succ_name)
                 self.insert_task_in_grq(succ_name)
-
+        
         self.dispatch_classified_tasks()
  
     def process_message(self, term_task_name):
         term_task = self.tasks[term_task_name]
         successors = term_task.get_succ()
+        msg = term_task.generate_msg(self.current_time + term_task.ret)
+        print_message(msg)
 
         for succ_name in successors:
             succ = self.tasks[succ_name]
-            msg = term_task.generate_msg(self.current_time + term_task.ret)
-            print_message(msg)
             succ.insert_msg(msg)
 
         if term_task.is_sink():
-            msg = term_task.save_msgs(self.current_time + term_task.ret)
-            print_message(msg)
             self.gathered_msg.append(msg)
 
     def gather_response_time(self):
         ###
         ##Gather all cpu's response time list.
-        ##task_list is for debugging
+        ##Return task_list for debugging
         ###
         task_list = {name: [] for name in self.tasks}
         total_list = []
@@ -181,7 +164,6 @@ class SIMSYS(object):
         for task in self.feats.keys():
             ext_sample = sampling_ext(self.ext_table, task)
             task_obj = SIMTSK(task, ext_sample, self.graph, self.feats)
-            #task_obj = task_attr(task, ext=ext_sample, ret=ext_sample, art=0, prd=self.feats[task].prd, cnt=0, off=self.feats[task].off, aff=self.feats[task].aff, rtd=0, stt='')
             self.tasks.update({task: task_obj})
         print_task_status(" after create task set",self.tasks)
         self.set_priority()

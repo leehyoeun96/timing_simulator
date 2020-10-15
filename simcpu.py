@@ -1,5 +1,4 @@
 from util import *
-#from recordtype import recordtype
 import random
    
 class SIMCPU(object):
