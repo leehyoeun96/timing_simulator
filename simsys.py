@@ -3,9 +3,7 @@ from simcpu import *
 from simtsk import *
 
 class SIMSYS(object):
-    def __init__(self, ncpus, feat_set, ext_table, task_graph, max_time):
-        self.ncpus = ncpus
-        self.cpus = [list() for i in range(ncpus)]
+    def __init__(self, feat_set, ext_table, task_graph, max_time):
         self.global_rq = list()
 
         self.gathered_rtl = list()
@@ -28,10 +26,13 @@ class SIMSYS(object):
             print("There's no task in task set")
             exit()
 
-        self.create_task_set()        
+        self.create_task_set()   
+        self.set_cpu_number()
+
         for task in self.tasks.values():
             if task.is_ready():
                 self.insert_task_in_grq(task.name)
+        
         self.initialize_cpus()
 
     def initialize_cpus(self):
@@ -39,13 +40,13 @@ class SIMSYS(object):
         ##Initialize CPUs
         ###
         for cpu_idx in range(self.ncpus):
-            self.cpus[cpu_idx] = SIMCPU(cpu_idx, self.prios, self.tasks, self.ext_table, self.graph, self.current_time, self.max_time)
+            self.cpus[cpu_idx] = SIMCPU(cpu_idx, self.prios, self.tasks, self.ext_table, self.graph, self.max_time)
         self.dispatch_classified_tasks()
 
         for cpu_idx in range(self.ncpus):
             print("........................")
-            self.current_time = self.cpus[cpu_idx].initialize_cpu()
-            self.cpus[cpu_idx].print_status(" after initialize")
+            #self.current_time = self.cpus[cpu_idx].initialize_cpu()
+            self.cpus[cpu_idx].print_status("after initialize")
      
     def find_min_event_time(self):
         ###
@@ -58,11 +59,13 @@ class SIMSYS(object):
         
         for cpu in self.cpus:
             term_flag, term_task_name = cpu.is_terminated()
+            #print("term_flag & term_task: ",term_flag,",",term_task_name)
+            #input()
             if term_flag: self.insert_ready_successors(term_task_name)
             next_event = cpu.find_min_event_time()
-            
+            #print("next_event:", next_event)
             if not next_event: 
-                print("There's no running task in CPU", cpu.icpu)
+                #print("There's no running task in CPU", cpu.icpu)
                 continue
             if not min_event:
                 min_event = next_event
@@ -70,7 +73,6 @@ class SIMSYS(object):
             elif min_event > next_event: 
                 min_event = next_event
                 evt_cpu_idx = cpu.icpu
-
         return evt_cpu_idx, min_event
 
     def update_system_status(self, cpu_idx, next_event):
@@ -81,11 +83,15 @@ class SIMSYS(object):
         ###
         next_time, next_task = next_event
         term_task_name, check_param = self.cpus[cpu_idx].update_cpu_status(next_time, next_task)
-        self.check_total_time(term_task_name, check_param, next_time)
-        running_same_task = term_task_name == next_task 
+        if term_task_name:
+            self.check_total_time(term_task_name, check_param, next_time)
+            running_same_task = term_task_name == next_task
+            if self.tasks[term_task_name].is_src(): self.insert_task_in_grq(term_task_name)
+            #if self.tasks[term_task_name].is_src() and not running_same_task: self.insert_task_in_grq(term_task_name)
+            self.dispatch_classified_tasks()
+
         self.current_time = next_time
-        if self.tasks[term_task_name].is_src() and not running_same_task: self.insert_task_in_grq(term_task_name)
-        self.dispatch_classified_tasks()
+        #print("CPU", cpu_idx, "Update's curr time", self.current_time)
         
         if self.current_time >= self.max_time:
             for cpu in self.cpus:
@@ -98,7 +104,6 @@ class SIMSYS(object):
         ##Classify task by it's affinity and dispatch to local run queue
         ###
         classified_tasks = {}
-
         while len(self.global_rq):
             ready_task=self.global_rq.pop(0)
             cpu_idx = self.tasks[ready_task].aff
@@ -116,6 +121,13 @@ class SIMSYS(object):
                 self.cpus[affi].insert_task_in_lrq(name)
 
     def insert_ready_successors(self, term_task_name):
+        ###
+        ## if term_task is not None, it send messages to successors
+        ## And insert successors to ready queue, if it is ready. 
+        ###
+        if not term_task_name:
+            return
+
         self.process_message(term_task_name)
 
         term_task = self.tasks[term_task_name]
@@ -124,6 +136,7 @@ class SIMSYS(object):
             succ = self.tasks[succ_name]
             if succ.is_ready():
                 #print(term_task_name == succ_name)
+                print(succ_name)
                 self.insert_task_in_grq(succ_name)
         
         self.dispatch_classified_tasks()
@@ -168,6 +181,14 @@ class SIMSYS(object):
         print_task_status(" after create task set",self.tasks)
         self.set_priority()
 
+    def set_cpu_number(self):
+        max_affinity = 0
+        for t in self.tasks.values():
+            if t.aff > max_affinity:
+                max_affinity = t.aff
+        self.ncpus = max_affinity + 1
+        self.cpus = [list() for i in range(self.ncpus)]
+
     def set_priority(self):
         ###
         ##Prioritize task in task set.
@@ -189,6 +210,13 @@ class SIMSYS(object):
         ###
         cons_time, capture_ret = param
         curr_prod = min(next_t - self.current_time, capture_ret)
+        '''
+        print("current produced time:", curr_prod)
+        print("next - curr:", next_t - self.current_time)
+        print("next:", next_t)
+        print("curr:", self.current_time)
+        print("ret:", capture_ret)
+        '''
         self.total_prod[name] = self.total_prod[name] + curr_prod
         if not self.total_prod[name] == cons_time:
             print("Total produced", self.total_prod[name], ",Total comsumed:",cons_time,":", name)

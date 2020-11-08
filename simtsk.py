@@ -55,9 +55,20 @@ class SIMTSK(object):
         subs_list = []
         subs_list.extend(self.msg_q)
         subs_list.extend(self.ready_msg_q)
+
+        ##1. Task is ready when getting messsage from predecessor which has same period.
         for pred in pred_list:
             if not any(pred in msg.src for msg in subs_list):
                 ready_flag = False
+        ##2. Task is ready when all(?) message arrived before task arrived.
+        
+        #if any(self.art < msg.end for msg in subs_list):
+        for msg in subs_list:
+            print(self.art, msg.end)
+            #ready_flag = False
+            input()
+
+        
         if not len(self.msg_q) == 0:
             self.ready_msg_q.extend(self.msg_q)
             self.msg_q = []
@@ -84,10 +95,10 @@ class SIMTSK(object):
 
     def generate_msg(self, now):
         if self.is_src() or len(self.ready_msg_q) == 0:
-            print("Source or first task:",self.name)
+            #print("Source or first task:",self.name)
             msg = self.generate_new_msg(now)
         else:
-            print("Sink or intermidiate task:",self.name)
+            #print("Sink or intermidiate task:",self.name)
             msg = self.merge_msg(now)
         
         if any(len(lst) != len(msg.src) for lst in [msg.id, msg.start]):
