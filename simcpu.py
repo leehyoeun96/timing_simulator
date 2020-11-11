@@ -63,7 +63,8 @@ class SIMCPU(object):
             #self.insert_evt(next_evts, next_t, task)
         elif not run_task_name and len(self.local_rq):
             print("No running task")
-            task = self.local_rq.pop(0)
+            #task = self.local_rq.pop(0)
+            task = self.local_rq[0]
             release_t = (self.tasks[task].prd * self.tasks[task].cnt) + self.tasks[task].off
             next_evt_list.append((release_t,task))
             #self.insert_evt(next_evts, release_t, task)
@@ -88,7 +89,6 @@ class SIMCPU(object):
             
             #include running task to next event candidates
             if run_task.is_ready():
-                print("READY???")
                 release_t = (run_task.prd * (run_task.cnt+1)) + run_task.off
                 next_evt = max(release_t, terminate_t)
                 next_evt_list.append((next_evt,run_task_name))
