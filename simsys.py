@@ -112,11 +112,7 @@ class SIMSYS(object):
             if term_task_name:
                 self.check_total_time(term_task_name, check_param, next_time)
                 running_same_task = term_task_name == next_task
-<<<<<<< HEAD
                 if self.tasks[term_task_name].is_src(): self.insert_task_in_grq(term_task_name)
-=======
-                #if self.tasks[term_task_name].is_src(): self.insert_task_in_grq(term_task_name)
->>>>>>> 8a851a452e508430b37e1204041db1e99731bac8
                 #if self.tasks[term_task_name].is_src() and not running_same_task: self.insert_task_in_grq(term_task_name)
                 self.dispatch_classified_tasks()
 
