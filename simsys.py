@@ -112,8 +112,8 @@ class SIMSYS(object):
             if term_task_name:
                 self.check_total_time(term_task_name, check_param, next_time)
                 running_same_task = term_task_name == next_task
-                if self.tasks[term_task_name].is_src(): self.insert_task_in_grq(term_task_name)
-                #if self.tasks[term_task_name].is_src() and not running_same_task: self.insert_task_in_grq(term_task_name)
+                #if self.tasks[term_task_name].is_src(): self.insert_task_in_grq(term_task_name)
+                if self.tasks[term_task_name].is_src() and not running_same_task: self.insert_task_in_grq(term_task_name)
                 self.dispatch_classified_tasks()
 
         self.current_time = next_time
@@ -159,11 +159,11 @@ class SIMSYS(object):
         successors = term_task.get_succ()
         for succ_name in successors:
             succ = self.tasks[succ_name]
-            if succ.is_ready() and not self.cpus[succ.aff].running_task == succ_name and not succ_name in self.cpus[succ.aff].local_rq: #?
+            is_redundant_task = self.cpus[succ.aff].running_task == succ_name or succ_name in self.cpus[succ.aff].local_rq #?
+            if succ.is_ready() and not is_redundant_task: #?
                 print(self.cpus[succ.aff].running_task , succ_name)
                 print(self.cpus[succ.aff].running_task == succ_name)
                 self.insert_task_in_grq(succ_name)
-                input()
         
         self.dispatch_classified_tasks()
  
