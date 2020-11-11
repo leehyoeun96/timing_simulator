@@ -32,10 +32,10 @@ def sys_simulation():
     
     while simsys.current_time < simsys.max_time:
         print("...........................")
-        cpu_idx, next_evt = simsys.find_min_event_time()
-        simsys.update_system_status(cpu_idx, next_evt)
-        simsys.cpus[cpu_idx].print_status("")
-        #input()
+        cpu_list, next_time, next_tasks = simsys.find_min_event_time()
+        simsys.update_system_status(cpu_list, next_time, next_tasks)
+        for cpu_idx in cpu_list:
+            simsys.cpus[cpu_idx].print_status("")
     return simsys.gathered_rtl, simsys.gathered_msg
 
 response_time_list, e2eL_msgs = sys_simulation()

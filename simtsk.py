@@ -61,14 +61,15 @@ class SIMTSK(object):
             if not any(pred in msg.src for msg in subs_list):
                 ready_flag = False
         ##2. Task is ready when all(?) message arrived before task arrived.
-        
-        #if any(self.art < msg.end for msg in subs_list):
+        ##This doesn't work if task is not a source task.
+        '''
+        if any(self.art < msg.end for msg in subs_list):
+            #print(self.art, msg.end)
+            ready_flag = False
+            #input()
+        '''
         for msg in subs_list:
-            print(self.art, msg.end)
-            #ready_flag = False
-            input()
-
-        
+            print("art/msg.end/name/ready_flag:", self.art, msg.end, self.name, ready_flag)
         if not len(self.msg_q) == 0:
             self.ready_msg_q.extend(self.msg_q)
             self.msg_q = []
@@ -94,7 +95,8 @@ class SIMTSK(object):
         return msg
 
     def generate_msg(self, now):
-        if self.is_src() or len(self.ready_msg_q) == 0:
+        if self.is_src() or len(self.ready_msg_q) == 0 or any(self.art < msg.end for msg in self.ready_msg_q):
+        #if self.is_src() or len(self.ready_msg_q) == 0:
             #print("Source or first task:",self.name)
             msg = self.generate_new_msg(now)
         else:
