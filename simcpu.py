@@ -1,5 +1,6 @@
 from util import *
 import random
+import math
    
 class SIMCPU(object):
     def __init__(self, cpu_idx, prio_set, task_set, ext_table, task_graph, max_time):
@@ -40,7 +41,74 @@ class SIMCPU(object):
         '''
         return self.current_time
 
+    def insert_evt(self, evts, k, v):
+        if k in evts.keys():
+            evts[k].append(v)
+        else:
+            evts[k] = [v]
+
     def find_min_event_time(self):
+        ###
+        ##Find min event time among tasks in local queue and running task
+        ###
+        next_evt_list = []
+        next_evts = {}
+        run_task_name = self.running_task
+        
+        if not run_task_name and not len(self.local_rq):
+            print("No running task, No ready task")
+            task = None
+            next_t = self.current_time
+            next_evt_list.append((next_t,task))
+            #self.insert_evt(next_evts, next_t, task)
+        elif not run_task_name and len(self.local_rq):
+            print("No running task")
+            task = self.local_rq.pop(0)
+            release_t = (self.tasks[task].prd * self.tasks[task].cnt) + self.tasks[task].off
+            next_evt_list.append((release_t,task))
+            #self.insert_evt(next_evts, release_t, task)
+        else:
+            print("Running task exist.")
+            run_task = self.tasks[run_task_name]
+            terminate_t = run_task.art + run_task.ret
+            for ready_task in self.local_rq:
+                if run_task_name == ready_task:
+                    print("ERROR: Same task as running task is in ready queue.:", ready_task)
+                    exit()
+                release_t = (self.tasks[ready_task].prd * self.tasks[ready_task].cnt) + self.tasks[ready_task].off
+                if self.prios[run_task_name] <= self.prios[ready_task]:
+                    next_evt = max(release_t, terminate_t)
+                elif terminate_t <= release_t:
+                    next_evt = release_t
+                else: #Occur preemption
+                    next_evt = max(release_t, self.current_time)
+                next_task = ready_task
+                next_evt_list.append((next_evt,next_task))
+                #self.insert_evt(next_evts, next_evt, next_task)
+            
+            #include running task to next event candidates
+            if run_task.is_ready():
+                print("READY???")
+                release_t = (run_task.prd * (run_task.cnt+1)) + run_task.off
+                next_evt = max(release_t, terminate_t)
+                next_evt_list.append((next_evt,run_task_name))
+                #self.insert_evt(next_evts, next_evt, run_task_name)
+            print(run_task_name)
+
+        if len(next_evt_list) == 0:
+            print("There's no next event")
+            task = None
+            next_t = self.current_time ##??
+            min_evt = (next_t, task)
+            #self.insert_evt(next_evts, next_t, task)
+        else: min_evt = min(next_evt_list)
+        '''
+        min_time = min(next_evts.keys())
+        min_task = next_evts[min_time]
+        '''
+        return min_evt
+
+    def find_min_event_time1(self):
         ###
         ##Find min event time among tasks in local queue and running task
         ###
@@ -72,7 +140,6 @@ class SIMCPU(object):
                 next_evt = max(release_t, self.current_time)
             next_task = ready_task
             next_evt_list.append((next_evt,next_task))
-        
         #include running task to next event candidates
         if self.tasks[run_task].is_ready():
             release_t = (self.tasks[run_task].prd * (self.tasks[run_task].cnt+1)) + self.tasks[run_task].off
@@ -80,6 +147,7 @@ class SIMCPU(object):
             next_evt = max(release_t, terminate_t)
             next_evt_list.append((next_evt,next_task))
         #print(run_task, "'s event list:",next_evt_list)
+        print(run_task)
         min_next_evt = min(next_evt_list)
 
         return min_next_evt
@@ -90,9 +158,7 @@ class SIMCPU(object):
         ##And, update next running task's status.
         ###
         next_off = next_evt - self.current_time
-        if next_task not in self.tasks:
-            print("CPU", self.icpu, "The next task", next_task, " is not in task set")
-            exit()
+        
         if next_off < 0:
             print("CPU", self.icpu, "Next offset " , next_off, "is negative value")
             exit()
@@ -124,7 +190,10 @@ class SIMCPU(object):
         
         if next_task in self.local_rq:
             self.local_rq.remove(next_task)
-        self.running_task = update_task_status(next_task, next_evt, self.tasks, 'run')
+        if next_task in self.tasks:
+            print("CPU", self.icpu, "The next task", next_task, " is in task set")
+            self.running_task = update_task_status(next_task, next_evt, self.tasks, 'run')
+
         self.current_time = next_evt
         
         #print("Next task:", self.running_task)
