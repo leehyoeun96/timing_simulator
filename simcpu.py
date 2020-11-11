@@ -96,11 +96,12 @@ class SIMCPU(object):
             print(run_task_name)
 
         if len(next_evt_list) == 0:
-            print("There's no next event")
+            print("ERROR: There's no next event")
             task = None
-            next_t = self.current_time ##??
+            next_t = self.current_time #?
             min_evt = (next_t, task)
             #self.insert_evt(next_evts, next_t, task)
+            exit()
         else: min_evt = min(next_evt_list)
         '''
         min_time = min(next_evts.keys())

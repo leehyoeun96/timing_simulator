@@ -159,9 +159,11 @@ class SIMSYS(object):
         successors = term_task.get_succ()
         for succ_name in successors:
             succ = self.tasks[succ_name]
-            if succ.is_ready() and not self.cpus[succ.aff].running_task == succ_name:
+            if succ.is_ready() and not self.cpus[succ.aff].running_task == succ_name and not succ_name in self.cpus[succ.aff].local_rq: #?
+                print(self.cpus[succ.aff].running_task , succ_name)
                 print(self.cpus[succ.aff].running_task == succ_name)
                 self.insert_task_in_grq(succ_name)
+                input()
         
         self.dispatch_classified_tasks()
  

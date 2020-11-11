@@ -68,8 +68,6 @@ class SIMTSK(object):
             ready_flag = False
             #input()
         '''
-        for msg in subs_list:
-            print("art/msg.end/name/ready_flag:", self.art, msg.end, self.name, ready_flag)
         if not len(self.msg_q) == 0:
             self.ready_msg_q.extend(self.msg_q)
             self.msg_q = []
