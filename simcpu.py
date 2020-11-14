@@ -47,6 +47,19 @@ class SIMCPU(object):
         else:
             evts[k] = [v]
 
+    def max_pred_term_time(self, ready_task):
+        ###
+        ##Get maximum time between termination time of predecessors.
+        ##Return 0, if there's no predecessor for the same period.
+        ###
+        pred_list = ready_task.get_pred()
+        term_time_list = []
+        term_t = 0
+        for pred in pred_list:
+            term_time_list.append(self.tasks[pred].art + self.tasks[pred].ret)
+        if term_time_list: term_t = max(term_time_list)
+        return term_t
+
     def find_min_event_time(self):
         ###
         ##Find min event time among tasks in local queue and running task
@@ -54,46 +67,46 @@ class SIMCPU(object):
         next_evt_list = []
         next_evts = {}
         run_task_name = self.running_task
-        
+ 
         if not run_task_name and not len(self.local_rq):
             print("No running task, No ready task")
             task = None
             next_t = self.current_time
             next_evt_list.append((next_t,task))
-            #self.insert_evt(next_evts, next_t, task)
         elif not run_task_name and len(self.local_rq):
             print("No running task")
-            #task = self.local_rq.pop(0)
-            task = self.local_rq[0]
-            release_t = (self.tasks[task].prd * self.tasks[task].cnt) + self.tasks[task].off
-            next_evt_list.append((release_t,task))
-            #self.insert_evt(next_evts, release_t, task)
+            ready_task_name = self.local_rq[0]
+            ready_task = self.tasks[ready_task_name]
+            release_t = (ready_task.prd * ready_task.cnt) + ready_task.off
+            pred_term_t = self.max_pred_term_time(ready_task)
+            evt_t = max(release_t,pred_term_t)
+            next_evt_list.append((evt_t,ready_task_name))
         else:
             print("Running task exist.")
             run_task = self.tasks[run_task_name]
             terminate_t = run_task.art + run_task.ret
-            for ready_task in self.local_rq:
-                if run_task_name == ready_task:
-                    print("ERROR: Same task as running task is in ready queue.:", ready_task)
+            for ready_task_name in self.local_rq:
+                if run_task_name == ready_task_name:
+                    print("ERROR: Same task as running task is in ready queue.:", ready_task_name)
                     exit()
-                release_t = (self.tasks[ready_task].prd * self.tasks[ready_task].cnt) + self.tasks[ready_task].off
+                ready_task = self.tasks[ready_task_name]
+                release_t = (ready_task.prd * ready_task.cnt) + ready_task.off
+                pred_term_t = self.max_pred_term_time(ready_task)
                 if self.prios[run_task_name] <= self.prios[ready_task]:
-                    next_evt = max(release_t, terminate_t)
+                    next_evt = max(release_t, terminate_t, pred_term_t)
                 elif terminate_t <= release_t:
-                    next_evt = release_t
+                    next_evt = max(release_t, pred_term_t)
                 else: #Occur preemption
-                    next_evt = max(release_t, self.current_time)
+                    next_evt = max(release_t, self.current_time, pred_term_t)
                 next_task = ready_task
                 next_evt_list.append((next_evt,next_task))
-                #self.insert_evt(next_evts, next_evt, next_task)
             
             #include running task to next event candidates
             if run_task.is_ready():
+                pred_term_t = self.max_pred_term_time(run_task)
                 release_t = (run_task.prd * (run_task.cnt+1)) + run_task.off
-                next_evt = max(release_t, terminate_t)
+                next_evt = max(release_t, terminate_t, pred_term_t)
                 next_evt_list.append((next_evt,run_task_name))
-                #self.insert_evt(next_evts, next_evt, run_task_name)
-            print(run_task_name)
 
         if len(next_evt_list) == 0:
             print("ERROR: There's no next event")
@@ -101,7 +114,6 @@ class SIMCPU(object):
             #next_t = self.current_time #?
             next_t = math.inf #?
             min_evt = (next_t, task)
-            #self.insert_evt(next_evts, next_t, task)
             #exit()
         else: min_evt = min(next_evt_list)
         '''
@@ -190,7 +202,6 @@ class SIMCPU(object):
             update_task_status(term_task_name, term_task.art, self.tasks, 'wait')
 
             check_param  = (self.total_cons[term_task_name], prod_time)
-        
         if next_task in self.local_rq:
             self.local_rq.remove(next_task)
         if next_task in self.tasks:

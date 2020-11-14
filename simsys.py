@@ -157,13 +157,12 @@ class SIMSYS(object):
         self.process_message(term_task_name)
 
         term_task = self.tasks[term_task_name]
+        terminate_t = term_task.art + term_task.ret
         successors = term_task.get_succ()
         for succ_name in successors:
             succ = self.tasks[succ_name]
             is_redundant_task = self.cpus[succ.aff].running_task == succ_name or succ_name in self.cpus[succ.aff].local_rq #?
             if succ.is_ready() and not is_redundant_task: #?
-                print(self.cpus[succ.aff].running_task , succ_name)
-                print(self.cpus[succ.aff].running_task == succ_name)
                 self.insert_task_in_grq(succ_name)
         
         self.dispatch_classified_tasks()
@@ -237,11 +236,13 @@ class SIMSYS(object):
         ###
         cons_time, prod_time = param
         #curr_prod = min(next_t - self.current_time, capture_ret)
+        '''
         print("current produced time:", prod_time)
         print("next - curr:", next_t - self.current_time)
         print("next:", next_t)
         print("curr:", self.current_time)
         #print("ret:", capture_ret)
+        '''
         self.total_prod[name] = self.total_prod[name] + prod_time
         if not self.total_prod[name] == cons_time:
             print("Total produced", self.total_prod[name], ",Total comsumed:",cons_time,":", name)
