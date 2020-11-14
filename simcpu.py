@@ -98,17 +98,18 @@ class SIMCPU(object):
         if len(next_evt_list) == 0:
             print("ERROR: There's no next event")
             task = None
-            next_t = self.current_time #?
+            #next_t = self.current_time #?
+            next_t = math.inf #?
             min_evt = (next_t, task)
             #self.insert_evt(next_evts, next_t, task)
-            exit()
+            #exit()
         else: min_evt = min(next_evt_list)
         '''
         min_time = min(next_evts.keys())
         min_task = next_evts[min_time]
         '''
         return min_evt
-
+    '''
     def find_min_event_time1(self):
         ###
         ##Find min event time among tasks in local queue and running task
@@ -152,7 +153,7 @@ class SIMCPU(object):
         min_next_evt = min(next_evt_list)
 
         return min_next_evt
-
+    '''
     def update_cpu_status(self, next_evt, next_task):
         ###
         ##Update terminate task's time information and status.
@@ -170,11 +171,11 @@ class SIMCPU(object):
         if self.running_task:
             term_task_name = self.running_task
             term_task = self.tasks[term_task_name]
-            saved_ret = term_task.ret
             if next_off < term_task.ret: #Occur preemption
                 #print("Occur preemption!")
                 self.total_cons[term_task_name] = self.total_cons[term_task_name] + next_off
                 term_task.set_ret(term_task.ret - next_off)
+                prod_time = term_task.ext - term_task.ret
             else:
                 #print("Terminate normally")
                 self.total_cons[term_task_name] = self.total_cons[term_task_name] + term_task.ret
@@ -184,15 +185,16 @@ class SIMCPU(object):
                 term_task.set_ext(next_ext)
                 term_task.set_ret(term_task.ext)
                 term_task.set_cnt(term_task.cnt + 1)
+                prod_time = term_task.ext
             
             update_task_status(term_task_name, term_task.art, self.tasks, 'wait')
 
-            check_param  = (self.total_cons[term_task_name], saved_ret)
+            check_param  = (self.total_cons[term_task_name], prod_time)
         
         if next_task in self.local_rq:
             self.local_rq.remove(next_task)
         if next_task in self.tasks:
-            print("CPU", self.icpu, "The next task", next_task, " is in task set")
+            print("CPU", self.icpu, ":The next task", next_task, " is in task set")
             self.running_task = update_task_status(next_task, next_evt, self.tasks, 'run')
 
         self.current_time = next_evt

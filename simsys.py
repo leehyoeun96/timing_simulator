@@ -110,6 +110,7 @@ class SIMSYS(object):
             #print("PLZ....",cpu_idx, next_task, next_time)
             term_task_name, check_param = self.cpus[cpu_idx].update_cpu_status(next_time, next_task)
             if term_task_name:
+                print(term_task_name, next_task)
                 self.check_total_time(term_task_name, check_param, next_time)
                 running_same_task = term_task_name == next_task
                 #if self.tasks[term_task_name].is_src(): self.insert_task_in_grq(term_task_name)
@@ -234,16 +235,14 @@ class SIMSYS(object):
         ###
         ##Compare task's total produced time and consumed time.
         ###
-        cons_time, capture_ret = param
-        curr_prod = min(next_t - self.current_time, capture_ret)
-        '''
-        print("current produced time:", curr_prod)
+        cons_time, prod_time = param
+        #curr_prod = min(next_t - self.current_time, capture_ret)
+        print("current produced time:", prod_time)
         print("next - curr:", next_t - self.current_time)
         print("next:", next_t)
         print("curr:", self.current_time)
-        print("ret:", capture_ret)
-        '''
-        self.total_prod[name] = self.total_prod[name] + curr_prod
+        #print("ret:", capture_ret)
+        self.total_prod[name] = self.total_prod[name] + prod_time
         if not self.total_prod[name] == cons_time:
             print("Total produced", self.total_prod[name], ",Total comsumed:",cons_time,":", name)
             exit()

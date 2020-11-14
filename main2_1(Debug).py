@@ -5,23 +5,20 @@ import util as util
 
 task_feat = recordtype("task_feat", 'prd, off, aff')
 
-max_time = 100
+max_time = 10
 
 task_graph = {
-    'task_0': ['task_A', 'task_B'],
-    'task_A': ['task_C'],
-    'task_B': ['task_C'],
-    'task_C': ['task_0'],
+    'task_0': ['task_A'],
+    'task_A': ['task_B'],
+    'task_B': ['task_0'],
 }
 feature_set = {
-    'task_A': task_feat(prd=100, off=0, aff=0),
-    'task_B': task_feat(prd=50,  off=10, aff=1),
-    'task_C': task_feat(prd=50,  off=5, aff=2),
+    'task_A': task_feat(prd=5, off=0, aff=0),
+    'task_B': task_feat(prd=5, off=1, aff=1),
 }
 ext_table = {
     'task_A': [0, 1],
     'task_B': [0, 0, 1],
-    'task_C': [0, 0, 0, 1],
 }
 
 
