@@ -94,8 +94,6 @@ class SIMSYS(object):
         if not len(evt_cpu):
             print("There's no event.. It seems strange.")
             exit()
-        #print("PLZ....",evt_cpu, min_tasks, min_time)
-        #input()
         return evt_cpu, min_time, min_tasks
 
     def update_system_status(self, cpu_list, next_time, next_tasks):
@@ -110,7 +108,7 @@ class SIMSYS(object):
             #print("PLZ....",cpu_idx, next_task, next_time)
             term_task_name, check_param = self.cpus[cpu_idx].update_cpu_status(next_time, next_task)
             if term_task_name:
-                print(term_task_name, next_task)
+                print("????",term_task_name, next_task)
                 self.check_total_time(term_task_name, check_param, next_time)
                 running_same_task = term_task_name == next_task
                 #if self.tasks[term_task_name].is_src(): self.insert_task_in_grq(term_task_name)

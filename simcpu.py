@@ -93,14 +93,13 @@ class SIMCPU(object):
                 ready_task = self.tasks[ready_task_name]
                 release_t = (ready_task.prd * ready_task.cnt) + ready_task.off
                 pred_term_t = self.max_pred_term_time(ready_task)
-                if self.prios[run_task_name] <= self.prios[ready_task]:
+                if self.prios[run_task_name] <= self.prios[ready_task_name]:
                     next_evt = max(release_t, terminate_t, pred_term_t)
                 elif terminate_t <= release_t:
                     next_evt = max(release_t, pred_term_t)
                 else: #Occur preemption
                     next_evt = max(release_t, self.current_time, pred_term_t)
-                next_task = ready_task
-                next_evt_list.append((next_evt,next_task))
+                next_evt_list.append((next_evt,ready_task_name))
             
             #include running task to next event candidates
             if run_task.is_ready():
@@ -121,6 +120,8 @@ class SIMCPU(object):
         min_time = min(next_evts.keys())
         min_task = next_evts[min_time]
         '''
+        #print("PLZ....",min_evt)
+        #input()
         return min_evt
     '''
     def find_min_event_time1(self):

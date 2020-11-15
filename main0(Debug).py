@@ -5,7 +5,6 @@ import util as util
 
 task_feat = recordtype("task_feat", 'prd, off, aff')
 
-cur_time = 0
 max_time = 100
 
 task_graph = {
@@ -27,7 +26,7 @@ ext_table = {
 }
 
 def sys_simulation():
-    simsys = SIMSYS( feature_set, ext_table, task_graph, max_time)
+    simsys = SIMSYS(feature_set, ext_table, task_graph, max_time)
     simsys.initialize_system()
     
     while simsys.current_time < simsys.max_time:
