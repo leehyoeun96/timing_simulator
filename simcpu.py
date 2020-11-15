@@ -71,7 +71,8 @@ class SIMCPU(object):
         if not run_task_name and not len(self.local_rq):
             print("No running task, No ready task")
             task = None
-            next_t = self.current_time
+            #next_t = self.current_time #?
+            next_t = math.inf #?
             next_evt_list.append((next_t,task))
         elif not run_task_name and len(self.local_rq):
             print("No running task")
