@@ -121,6 +121,7 @@ class SIMCPU(object):
         min_task = next_evts[min_time]
         '''
         #print("PLZ....",min_evt)
+        #print("??????",next_evt_list)
         #input()
         return min_evt
     '''

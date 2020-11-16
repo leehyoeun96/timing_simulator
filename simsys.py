@@ -108,7 +108,6 @@ class SIMSYS(object):
             #print("PLZ....",cpu_idx, next_task, next_time)
             term_task_name, check_param = self.cpus[cpu_idx].update_cpu_status(next_time, next_task)
             if term_task_name:
-                print("????",term_task_name, next_task)
                 self.check_total_time(term_task_name, check_param, next_time)
                 running_same_task = term_task_name == next_task
                 #if self.tasks[term_task_name].is_src(): self.insert_task_in_grq(term_task_name)
@@ -160,6 +159,7 @@ class SIMSYS(object):
         for succ_name in successors:
             succ = self.tasks[succ_name]
             is_redundant_task = self.cpus[succ.aff].running_task == succ_name or succ_name in self.cpus[succ.aff].local_rq #?
+            print(succ_name, succ.is_ready())
             if succ.is_ready() and not is_redundant_task: #?
                 self.insert_task_in_grq(succ_name)
         

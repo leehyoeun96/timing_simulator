@@ -3,7 +3,7 @@ import time
 import copy
 from util import *
 
-message = recordtype("message", 'src, id, start, end')
+message = recordtype("message", 'src, id, start, interm, end')
 class SIMTSK(object):
     def __init__(self, name, ext, task_graph, task_features):
         ##task attribute
@@ -23,7 +23,23 @@ class SIMTSK(object):
         self.graph = task_graph
         self.feats = task_features
         self.msg_id = 0
-
+    
+    def get_ancestor(self):
+        ances =[]
+        curr_level = []
+        next_level = []
+        curr_level = self.graph['task_0']
+        while curr_level:
+            task = curr_level.pop(0)
+            if self.feats[task].prd == self.prd:
+                ances.append(task)
+            elif not self.graph[task] == 'task_0':
+                next_level.extend(self.graph[task])
+            else:
+                break
+            curr_level = next_level
+        return ances
+     
     def get_pred(self):
         pred =[]
         for key, value in self.graph.items():
@@ -52,18 +68,25 @@ class SIMTSK(object):
     def is_ready(self):
         pred_list = self.get_pred()
         ready_flag = True
-        subs_list = []
-        subs_list.extend(self.msg_q)
-        subs_list.extend(self.ready_msg_q)
+        recv_list = []
+        recv_list.extend(self.msg_q)
+        recv_list.extend(self.ready_msg_q)
+        processed_tasks = []
 
+        for msg in recv_list:
+            processed_tasks.extend(msg.src + msg.interm)
+            #print("src:",msg.src)
+            #print("interm:",msg.interm)
+        print("processed tasks:", processed_tasks)
         ##1. Task is ready when getting messsage from predecessor which has same period.
         for pred in pred_list:
-            if not any(pred in msg.src for msg in subs_list):
+            if not any(pred in task for task in processed_tasks):
+            #if not any(pred in msg.src for msg in recv_list):
                 ready_flag = False
         ##2. Task is ready when all(?) message arrived before task arrived.
         ##This doesn't work if task is not a source task.
         '''
-        if any(self.art < msg.end for msg in subs_list):
+        if any(self.art < msg.end for msg in recv_list):
             #print(self.art, msg.end)
             ready_flag = False
             #input()
@@ -71,30 +94,35 @@ class SIMTSK(object):
         if not len(self.msg_q) == 0:
             self.ready_msg_q.extend(self.msg_q)
             self.msg_q = []
+        #print(pred_list, ready_flag)
+        #print("Received message:", recv_list)
+        #input()
         return ready_flag
 
     def merge_msg(self, now):
-        msg = message(src = [], id = [], start = [], end = 0)
+        msg = message(src = [], id = [], start = [], interm=[self.name], end = 0)
         for recv_msg in self.ready_msg_q:
             for recv_idx, recv_src in enumerate(recv_msg.src):
                 if not recv_src in msg.src:
                     msg.src.append(recv_src)
                     msg.start.append(recv_msg.start[recv_idx])
                     msg.id.append(recv_msg.id[recv_idx])
+                    msg.interm.extend(recv_msg.interm)
                 ##Overwriting message
                 elif recv_src in msg.src and recv_msg.start[recv_idx] == max(recv_msg.start[recv_idx], msg.start[recv_idx]):
                     orig_idx = msg.src.index(recv_src)
                     msg.src[orig_idx] = recv_msg.src[recv_idx]
                     msg.start[orig_idx] = recv_msg.start[recv_idx]
                     msg.id[orig_idx] = recv_msg.id[recv_idx]
+                    msg.interm.extend(recv_msg.interm)
                 #else: print("Received message is out of date.")
         self.ready_msg_q = []
         msg.end = now
         return msg
 
     def generate_msg(self, now):
-        if self.is_src() or len(self.ready_msg_q) == 0 or any(self.art < msg.end for msg in self.ready_msg_q):
         #if self.is_src() or len(self.ready_msg_q) == 0:
+        if self.is_src() or len(self.ready_msg_q) == 0 or any(self.art < msg.end for msg in self.ready_msg_q):
             #print("Source or first task:",self.name)
             msg = self.generate_new_msg(now)
         else:
@@ -111,7 +139,7 @@ class SIMTSK(object):
 
     def generate_new_msg(self, now):
         release_time = (self.prd * self.cnt) + self.off
-        msg = message(src = [self.name], id = [self.msg_id], start = [release_time], end = now)
+        msg = message(src=[self.name], id=[self.msg_id], start=[release_time], interm=[], end=now)
         self.msg_id = self.msg_id + 1
         return msg
 
@@ -184,10 +212,6 @@ def Test_Main():
     taskC.msg_q = [msg1, msg2]
     p = taskC.get_pred()
     print(p)
-    print_message(taskB.generate_msg())
-    for msg in taskC.save_msgs():
-        print_message(msg)
-
-
+   
 Test_Main()
 '''
