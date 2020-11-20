@@ -69,13 +69,13 @@ class SIMCPU(object):
         run_task_name = self.running_task
  
         if not run_task_name and not len(self.local_rq):
-            print("No running task, No ready task")
+            #print("No running task, No ready task")
             task = None
             #next_t = self.current_time #?
             next_t = math.inf #?
             next_evt_list.append((next_t,task))
         elif not run_task_name and len(self.local_rq):
-            print("No running task")
+            #print("No running task")
             ready_task_name = self.local_rq[0]
             ready_task = self.tasks[ready_task_name]
             release_t = (ready_task.prd * ready_task.cnt) + ready_task.off
@@ -83,7 +83,7 @@ class SIMCPU(object):
             evt_t = max(release_t,pred_term_t)
             next_evt_list.append((evt_t,ready_task_name))
         else:
-            print("Running task exist.")
+            #print("Running task exist.")
             run_task = self.tasks[run_task_name]
             terminate_t = run_task.art + run_task.ret
             for ready_task_name in self.local_rq:
@@ -109,7 +109,7 @@ class SIMCPU(object):
                 next_evt_list.append((next_evt,run_task_name))
 
         if len(next_evt_list) == 0:
-            print("ERROR: There's no next event")
+            print("There's no next event: CPU",self.icpu)
             task = None
             #next_t = self.current_time #?
             next_t = math.inf #?
@@ -120,9 +120,6 @@ class SIMCPU(object):
         min_time = min(next_evts.keys())
         min_task = next_evts[min_time]
         '''
-        #print("PLZ....",min_evt)
-        #print("??????",next_evt_list)
-        #input()
         return min_evt
     '''
     def find_min_event_time1(self):
@@ -208,7 +205,7 @@ class SIMCPU(object):
         if next_task in self.local_rq:
             self.local_rq.remove(next_task)
         if next_task in self.tasks:
-            print("CPU", self.icpu, ":The next task", next_task, " is in task set")
+            #print("CPU", self.icpu, ":The next task", next_task, " is in task set")
             self.running_task = update_task_status(next_task, next_evt, self.tasks, 'run')
 
         self.current_time = next_evt

@@ -111,7 +111,7 @@ class SIMSYS(object):
                 self.check_total_time(term_task_name, check_param, next_time)
                 running_same_task = term_task_name == next_task
                 #if self.tasks[term_task_name].is_src(): self.insert_task_in_grq(term_task_name)
-                if self.tasks[term_task_name].is_src() and not running_same_task: self.insert_task_in_grq(term_task_name)
+                if self.tasks[term_task_name].is_subgraph_src() and not running_same_task: self.insert_task_in_grq(term_task_name)
                 self.dispatch_classified_tasks()
 
         self.current_time = next_time
@@ -159,7 +159,8 @@ class SIMSYS(object):
         for succ_name in successors:
             succ = self.tasks[succ_name]
             is_redundant_task = self.cpus[succ.aff].running_task == succ_name or succ_name in self.cpus[succ.aff].local_rq #?
-            print(succ_name, succ.is_ready())
+            print(term_task_name,"'s succ",succ_name, "is redundant?", is_redundant_task)
+            #input()
             if succ.is_ready() and not is_redundant_task: #?
                 self.insert_task_in_grq(succ_name)
         
@@ -169,6 +170,7 @@ class SIMSYS(object):
         term_task = self.tasks[term_task_name]
         successors = term_task.get_succ()
         msg = term_task.generate_msg(self.current_time + term_task.ret)
+        print("Generate message")
         print_message(msg)
 
         for succ_name in successors:
@@ -176,6 +178,8 @@ class SIMSYS(object):
             succ.insert_msg(msg)
 
         if term_task.is_sink():
+            print("Save message")
+            print_message(msg)
             self.gathered_msg.append(msg)
 
     def gather_response_time(self):

@@ -3,7 +3,7 @@ import time
 import copy
 from util import *
 
-message = recordtype("message", 'src, interm, id, start, end')
+message = recordtype("message", 'src, id, start, interm, end')
 class SIMTSK(object):
     def __init__(self, name, ext, task_graph, task_features):
         ##task attribute
@@ -23,6 +23,22 @@ class SIMTSK(object):
         self.graph = task_graph
         self.feats = task_features
         self.msg_id = 0
+    
+    def get_ancestor(self):
+        ances =[]
+        curr_level = []
+        next_level = []
+        curr_level = self.graph['task_0']
+        while curr_level:
+            task = curr_level.pop(0)
+            if self.feats[task].prd == self.prd:
+                ances.append(task)
+            elif not self.graph[task] == 'task_0':
+                next_level.extend(self.graph[task])
+            else:
+                break
+            curr_level = next_level
+        return ances
      
     def get_pred(self):
         pred =[]
@@ -35,19 +51,6 @@ class SIMTSK(object):
         if 'task_0' in self.graph[self.name]:
             return []
         else: return self.graph[self.name]
-
-    def is_subgraph_src(self):
-        flag = True
-        curr_prd = self.prd
-        subgraph = {}
-        for task, successors in self.graph.items():
-            if task == 'task_0': continue
-            if self.feats[task].prd == curr_prd:
-                subgraph[task] = successors
-        if any(self.name in sub for sub in subgraph.values()):
-            flag = False
-
-        return flag
 
     def is_src(self):
         flag = False
@@ -62,10 +65,6 @@ class SIMTSK(object):
     def is_sink(self):
         return self.get_succ() == []
 
-    def is_first_task(self):
-        is_first = False
-        return is_first
-    
     def is_ready(self):
         pred_list = self.get_pred()
         ready_flag = True
@@ -76,21 +75,33 @@ class SIMTSK(object):
 
         for msg in recv_list:
             processed_tasks.extend(msg.src + msg.interm)
-        
-        ##Task is ready when getting messsage from predecessor which has same period.
+            #print("src:",msg.src)
+            #print("interm:",msg.interm)
+        print("processed tasks:", processed_tasks)
+        ##1. Task is ready when getting messsage from predecessor which has same period.
         for pred in pred_list:
             if not any(pred in task for task in processed_tasks):
+            #if not any(pred in msg.src for msg in recv_list):
                 ready_flag = False
-
+        ##2. Task is ready when all(?) message arrived before task arrived.
+        ##This doesn't work if task is not a source task.
+        '''
+        if any(self.art < msg.end for msg in recv_list):
+            #print(self.art, msg.end)
+            ready_flag = False
+            #input()
+        '''
         if not len(self.msg_q) == 0:
             self.ready_msg_q.extend(self.msg_q)
             self.msg_q = []
+        #print(pred_list, ready_flag)
+        #print("Received message:", recv_list)
+        #input()
         return ready_flag
 
     def merge_msg(self, now):
         msg = message(src = [], id = [], start = [], interm=[self.name], end = 0)
         for recv_msg in self.ready_msg_q:
-            if self.art < recv_msg.end: break
             for recv_idx, recv_src in enumerate(recv_msg.src):
                 if not recv_src in msg.src:
                     msg.src.append(recv_src)
@@ -105,39 +116,13 @@ class SIMTSK(object):
                     msg.id[orig_idx] = recv_msg.id[recv_idx]
                     msg.interm.extend(recv_msg.interm)
                 #else: print("Received message is out of date.")
-        if not msg.src:
-            print("ERROR: all received message was not merged")
-            exit()
         self.ready_msg_q = []
         msg.end = now
         return msg
-    
-    def get_dep_msg(self):
-        pred_list = self.get_pred()
-        dep_msg = []
-        for pred in pred_list:
-            for msg in self.ready_msg_q:
-                if pred in msg.src or pred in msg.interm:
-                    dep_msg.append(msg)
-        return dep_msg
-    
-    def generate_msg(self, now):
-        '''
-        dep_msg = self.get_dep_msg()
-        print(dep_msg)
-        if dep_msg: #has data dependency
-            first_flag = any(self.art < msg.end for msg in dep_msg)
-            if first_flag:
-                print(self.name, self.art)
-                exit()
-        elif self.ready_msg_q: #received message from predecessor
-            first_flag = False
-        else: first_flag = True
-        print(self.name, "is first task?",first_flag)
-        '''
-        first_flag = all(self.art < msg.end for msg in self.ready_msg_q)
 
-        if self.is_src() or len(self.ready_msg_q) == 0 or first_flag:
+    def generate_msg(self, now):
+        #if self.is_src() or len(self.ready_msg_q) == 0:
+        if self.is_src() or len(self.ready_msg_q) == 0 or any(self.art < msg.end for msg in self.ready_msg_q):
             #print("Source or first task:",self.name)
             msg = self.generate_new_msg(now)
         else:
@@ -205,36 +190,27 @@ class SIMTSK(object):
 task_feat = recordtype("task_feat", 'ext, prd, off, aff')
 feature_set = {
     'task_A': task_feat(ext=10,prd=25, off=0, aff=0),
-    'task_B': task_feat(ext=5, prd=5, off=0, aff=0),
-    'task_C': task_feat(ext=7, prd=25, off=0, aff=0),
-    'task_D': task_feat(ext=5, prd=5, off=0, aff=0),
-    'task_E': task_feat(ext=7, prd=5, off=0, aff=0),
+    'task_B': task_feat(ext=5, prd=25, off=0, aff=0),
+    'task_C': task_feat(ext=7, prd=25, off=0, aff=0)
 }
 
 task_graph = {
     'task_0': ['task_A', 'task_B'],
-    'task_A': ['task_C', 'task_D'],
-    'task_B': ['task_E'],
-    'task_C': ['task_E'],
-    'task_D': ['task_E'],
-    'task_E': ['task_0']
+    'task_A': ['task_C'],
+    'task_B': ['task_C'],
+    'task_C': ['task_0']
 }
 
-msg1 = message(src = ['task_A', 'task_B', 'task_C'], interm=[], id = [1,1,1], start = [1,1,1], end = 1 )
-msg2 = message(src = ['task_A', 'task_C'], interm=[], id = [2,2], start = [2,2], end = 1 )
+msg1 = message(src = ['task_A', 'task_B', 'task_C'], id = [1,1,1], start = [1,1,1], end = 1 )
+msg2 = message(src = ['task_A', 'task_C'], id = [2,2], start = [2,2], end = 1 )
 ##################
 
 def Test_Main():
-    taskA = SIMTSK('task_A', 5, task_graph, feature_set)
     taskB = SIMTSK('task_B', 5, task_graph, feature_set)
-    taskC = SIMTSK('task_C', 10, task_graph, feature_set)
-    taskD = SIMTSK('task_D', 5, task_graph, feature_set)
-    taskE = SIMTSK('task_E', 10, task_graph, feature_set)
-    
+    taskC = SIMTSK('task_C', 5, task_graph, feature_set)
     taskB.msg_q = [msg1, msg2]
     taskC.msg_q = [msg1, msg2]
-    #p = taskC.get_pred()
-    p = taskE.is_subgraph_src()
+    p = taskC.get_pred()
     print(p)
    
 Test_Main()
