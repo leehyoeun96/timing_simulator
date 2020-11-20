@@ -89,8 +89,10 @@ class SIMTSK(object):
 
     def merge_msg(self, now):
         msg = message(src = [], id = [], start = [], interm=[self.name], end = 0)
-        for recv_msg in self.ready_msg_q:
-            if self.art < recv_msg.end: break
+        msgs = copy.deepcopy(self.ready_msg_q)
+        for recv_msg in msgs:
+            print("After for loop:",recv_msg)
+            if self.art < recv_msg.end: continue
             for recv_idx, recv_src in enumerate(recv_msg.src):
                 if not recv_src in msg.src:
                     msg.src.append(recv_src)
@@ -105,10 +107,12 @@ class SIMTSK(object):
                     msg.id[orig_idx] = recv_msg.id[recv_idx]
                     msg.interm.extend(recv_msg.interm)
                 #else: print("Received message is out of date.")
+            self.ready_msg_q.remove(recv_msg)
+            #del self.ready_msg_q[self.ready_msg_q.index(recv_msg)]
         if not msg.src:
             print("ERROR: all received message was not merged")
             exit()
-        self.ready_msg_q = []
+        #self.ready_msg_q = []
         msg.end = now
         return msg
     
@@ -138,7 +142,7 @@ class SIMTSK(object):
         first_flag = all(self.art < msg.end for msg in self.ready_msg_q)
 
         if self.is_src() or len(self.ready_msg_q) == 0 or first_flag:
-            #print("Source or first task:",self.name)
+            #print("Source or first task of the period:",self.name)
             msg = self.generate_new_msg(now)
         else:
             #print("Sink or intermidiate task:",self.name)
@@ -197,17 +201,16 @@ class SIMTSK(object):
             exit()
         return msg
 
-
 '''
 ##################
 ##For Test_Main##
 ##################
 task_feat = recordtype("task_feat", 'ext, prd, off, aff')
 feature_set = {
-    'task_A': task_feat(ext=10,prd=25, off=0, aff=0),
+    'task_A': task_feat(ext=10,prd=5, off=0, aff=0),
     'task_B': task_feat(ext=5, prd=5, off=0, aff=0),
-    'task_C': task_feat(ext=7, prd=25, off=0, aff=0),
-    'task_D': task_feat(ext=5, prd=5, off=0, aff=0),
+    'task_C': task_feat(ext=7, prd=25, off=10, aff=0),
+    'task_D': task_feat(ext=5, prd=25, off=0, aff=0),
     'task_E': task_feat(ext=7, prd=5, off=0, aff=0),
 }
 
@@ -234,7 +237,8 @@ def Test_Main():
     taskB.msg_q = [msg1, msg2]
     taskC.msg_q = [msg1, msg2]
     #p = taskC.get_pred()
-    p = taskE.is_subgraph_src()
+    #p = taskA.is_subgraph_src()
+    taskC.merge_msg(0)
     print(p)
    
 Test_Main()

@@ -159,8 +159,6 @@ class SIMSYS(object):
         for succ_name in successors:
             succ = self.tasks[succ_name]
             is_redundant_task = self.cpus[succ.aff].running_task == succ_name or succ_name in self.cpus[succ.aff].local_rq #?
-            print(term_task_name,"'s succ",succ_name, "is redundant?", is_redundant_task)
-            #input()
             if succ.is_ready() and not is_redundant_task: #?
                 self.insert_task_in_grq(succ_name)
         
