@@ -5,7 +5,7 @@ import util as util
 
 task_feat = recordtype("task_feat", 'prd, off, aff')
 
-max_time = 50
+max_time = 100
 
 task_graph = {
     'task_0': ['task_A', 'task_B'],
