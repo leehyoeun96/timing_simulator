@@ -89,9 +89,8 @@ class SIMTSK(object):
 
     def merge_msg(self, now):
         msg = message(src = [], id = [], start = [], interm=[self.name], end = 0)
-        msgs = copy.deepcopy(self.ready_msg_q)
-        for recv_msg in msgs:
-            print("After for loop:",recv_msg)
+        rcv_msgs = copy.deepcopy(self.ready_msg_q)
+        for recv_msg in rcv_msgs:
             if self.art < recv_msg.end: continue
             for recv_idx, recv_src in enumerate(recv_msg.src):
                 if not recv_src in msg.src:
@@ -108,7 +107,6 @@ class SIMTSK(object):
                     msg.interm.extend(recv_msg.interm)
                 #else: print("Received message is out of date.")
             self.ready_msg_q.remove(recv_msg)
-            #del self.ready_msg_q[self.ready_msg_q.index(recv_msg)]
         if not msg.src:
             print("ERROR: all received message was not merged")
             exit()
