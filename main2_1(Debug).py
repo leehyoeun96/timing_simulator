@@ -32,7 +32,7 @@ def sys_simulation():
         simsys.update_system_status(cpu_list, next_time, next_tasks)
         for cpu_idx in cpu_list:
             simsys.cpus[cpu_idx].print_status("")
-        #input()
+        input()
     return simsys.gathered_rtl, simsys.gathered_msg
 
 response_time_list, e2eL_msgs = sys_simulation()

@@ -41,7 +41,7 @@ def print_message(msg):
     print("  msg ids:", msg.id)
     print("  start time:", msg.start)
     print("  end time:", msg.end)
-    #print("  intermediates:", msg.interm)
+    print("  intermediates:", msg.interm)
     print("----------------------------")
 
 def show_response_time(response_time):

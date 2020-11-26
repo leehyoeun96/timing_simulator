@@ -18,6 +18,7 @@ class SIMCPU(object):
         self.prio_term_task = None
 
         self.total_cons = {name: 0 for name in self.tasks}
+        self.total_prod = {name: 0 for name in self.tasks}
         self.task_rtl = {name: [] for name in self.tasks}
 
     def initialize_cpu(self):
@@ -121,51 +122,7 @@ class SIMCPU(object):
         min_task = next_evts[min_time]
         '''
         return min_evt
-    '''
-    def find_min_event_time1(self):
-        ###
-        ##Find min event time among tasks in local queue and running task
-        ###
-        next_evt_list = []
-        
-        ##running task must needed
-        run_task = self.running_task
-        
-        if not run_task:
-            if not len(self.local_rq):
-                print("ERROR: Too many CPUs than tasks needed.")
-                exit()
-            #print("CPU",self.icpu,": There's no running task")
-            first_task=self.local_rq[0]
-            release_t = self.tasks[first_task].off
-            return (release_t, first_task)
-        
-        terminate_t = self.tasks[run_task].art + self.tasks[run_task].ret
-        for ready_task in self.local_rq:
-            release_t = (self.tasks[ready_task].prd * self.tasks[ready_task].cnt) + self.tasks[ready_task].off
-            ##Is it really used?
-            if run_task not in self.tasks.keys():
-                next_evt = release_t
-            elif self.prios[run_task] <= self.prios[ready_task] and not run_task == ready_task:
-                next_evt = max(release_t, terminate_t)
-            elif terminate_t <= release_t:
-                next_evt = release_t
-            else: #Occur preemption
-                next_evt = max(release_t, self.current_time)
-            next_task = ready_task
-            next_evt_list.append((next_evt,next_task))
-        #include running task to next event candidates
-        if self.tasks[run_task].is_ready():
-            release_t = (self.tasks[run_task].prd * (self.tasks[run_task].cnt+1)) + self.tasks[run_task].off
-            next_task = run_task
-            next_evt = max(release_t, terminate_t)
-            next_evt_list.append((next_evt,next_task))
-        #print(run_task, "'s event list:",next_evt_list)
-        print(run_task)
-        min_next_evt = min(next_evt_list)
-
-        return min_next_evt
-    '''
+    
     def update_cpu_status(self, next_evt, next_task):
         ###
         ##Update terminate task's time information and status.
@@ -183,6 +140,7 @@ class SIMCPU(object):
         if self.running_task:
             term_task_name = self.running_task
             term_task = self.tasks[term_task_name]
+            saved_ret = term_task.ret
             if next_off < term_task.ret: #Occur preemption
                 #print("Occur preemption!")
                 self.total_cons[term_task_name] = self.total_cons[term_task_name] + next_off
@@ -201,18 +159,37 @@ class SIMCPU(object):
             
             update_task_status(term_task_name, term_task.art, self.tasks, 'wait')
 
-            check_param  = (self.total_cons[term_task_name], prod_time)
+            #check_param  = (self.total_cons[term_task_name], prod_time)
+            self.check_cpu_time(term_task_name, saved_ret, next_evt);
         if next_task in self.local_rq:
             self.local_rq.remove(next_task)
         if next_task in self.tasks:
             #print("CPU", self.icpu, ":The next task", next_task, " is in task set")
             self.running_task = update_task_status(next_task, next_evt, self.tasks, 'run')
-
         self.current_time = next_evt
         
         #print("Next task:", self.running_task)
         #print("Term task:", term_task_name)
-        return term_task_name, check_param
+        return term_task_name
+   
+    def check_cpu_time(self, name, ret, next_t):
+        ###
+        ##Compare task's total produced time and consumed time.
+        ###
+        #cons_time, prod_time = param
+        cons_time = self.total_cons[name] ##Consumed time by task
+        prod_time = min(next_t - self.current_time, ret) ##Produced time by CPU
+        '''
+        print("current produced time:", prod_time)
+        print("next - curr:", next_t - self.current_time)
+        print("next:", next_t)
+        print("curr:", self.current_time)
+        print("ret:", ret)
+        '''
+        self.total_prod[name] = self.total_prod[name] + prod_time
+        if not self.total_prod[name] == cons_time:
+            print("Total produced", self.total_prod[name], ",Total comsumed:",cons_time,":", name)
+            exit()
 
     def is_terminated(self):
         ###
