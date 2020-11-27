@@ -87,33 +87,7 @@ class SIMTSK(object):
             self.msg_q = []
         return ready_flag
 
-    def merge_msg(self, now):
-        msg = message(src = [], id = [], start = [], interm=[self.name], end = 0)
-        rcv_msgs = copy.deepcopy(self.ready_msg_q)
-        for recv_msg in rcv_msgs:
-            if self.art < recv_msg.end: continue
-            for recv_idx, recv_src in enumerate(recv_msg.src):
-                if not recv_src in msg.src:
-                    msg.src.append(recv_src)
-                    msg.start.append(recv_msg.start[recv_idx])
-                    msg.id.append(recv_msg.id[recv_idx])
-                    msg.interm.extend(recv_msg.interm)
-                ##Overwriting message
-                elif recv_src in msg.src and recv_msg.start[recv_idx] == max(recv_msg.start[recv_idx], msg.start[recv_idx]):
-                    orig_idx = msg.src.index(recv_src)
-                    msg.src[orig_idx] = recv_msg.src[recv_idx]
-                    msg.start[orig_idx] = recv_msg.start[recv_idx]
-                    msg.id[orig_idx] = recv_msg.id[recv_idx]
-                    msg.interm.extend(recv_msg.interm)
-                #else: print("Received message is out of date.")
-            self.ready_msg_q.remove(recv_msg)
-        if not msg.src:
-            print("ERROR: all received message was not merged")
-            exit()
-        #self.ready_msg_q = []
-        msg.end = now
-        return msg
-    
+   
     def get_dep_msg(self):
         pred_list = self.get_pred()
         dep_msg = []
@@ -124,19 +98,6 @@ class SIMTSK(object):
         return dep_msg
     
     def generate_msg(self, now):
-        '''
-        dep_msg = self.get_dep_msg()
-        print(dep_msg)
-        if dep_msg: #has data dependency
-            first_flag = any(self.art < msg.end for msg in dep_msg)
-            if first_flag:
-                print(self.name, self.art)
-                exit()
-        elif self.ready_msg_q: #received message from predecessor
-            first_flag = False
-        else: first_flag = True
-        print(self.name, "is first task?",first_flag)
-        '''
         first_flag = all(self.art < msg.end for msg in self.ready_msg_q)
 
         if self.is_src() or len(self.ready_msg_q) == 0 or first_flag:
@@ -166,7 +127,7 @@ class SIMTSK(object):
     def calculate_response_time(self, response_list):
         release_time = (self.prd * self.cnt) + self.off
         self.rtd = self.art - release_time + self.ret
-        print_response_time("Response time", self, release_time)
+        #print_response_time("Response time", self, release_time)
         
         if self.rtd< 0:
             print("Response time is negative value")
@@ -199,6 +160,62 @@ class SIMTSK(object):
             exit()
         return msg
 
+    def merge_msg(self, now):
+        msg = message(src = [], id = [], start = [], interm=[], end = 0)
+        rcv_msgs = copy.deepcopy(self.ready_msg_q)
+        for recv_msg in rcv_msgs:
+            if self.art < recv_msg.end: continue
+            for recv_idx, recv_src in enumerate(recv_msg.src):
+                if not recv_src in msg.src:
+                    msg.src.append(recv_src)
+                    msg.start.append(recv_msg.start[recv_idx])
+                    msg.id.append(recv_msg.id[recv_idx])
+                    msg.interm.extend(recv_msg.interm)
+                ##Overwriting message
+                elif recv_src in msg.src and recv_msg.start[recv_idx] == max(recv_msg.start[recv_idx], msg.start[recv_idx]):
+                    orig_idx = msg.src.index(recv_src)
+                    msg.src[orig_idx] = recv_msg.src[recv_idx]
+                    msg.start[orig_idx] = recv_msg.start[recv_idx]
+                    msg.id[orig_idx] = recv_msg.id[recv_idx]
+                    msg.interm.extend(recv_msg.interm)
+                #else: print("Received message is out of date.")
+            self.ready_msg_q.remove(recv_msg)
+        if not msg.src:
+            print("ERROR: all received message was not merged")
+            exit()
+        #self.ready_msg_q = []
+        msg.end = now
+        msg.interm.append(self.name)
+        return msg
+
+    def test_merge_msg(self, now):
+        msg = message(src = [], id = [], start = [], interm=[], end =[])
+        rcv_msgs = copy.deepcopy(self.ready_msg_q)
+        for recv_msg in rcv_msgs:
+            issue_t = recv_msg.end[-1][-1]
+            if self.art < issue_t: continue
+            for recv_idx, recv_src in enumerate(recv_msg.src):
+                if not recv_src in msg.src:
+                    msg.src.append(recv_src)
+                    msg.start.append(recv_msg.start[recv_idx])
+                    msg.id.append(recv_msg.id[recv_idx])
+                    msg.interm.extend(recv_msg.interm)
+                ##Overwriting message
+                elif recv_src in msg.src and recv_msg.start[recv_idx] == max(recv_msg.start[recv_idx], msg.start[recv_idx]):
+                    orig_idx = msg.src.index(recv_src)
+                    msg.src[orig_idx] = recv_msg.src[recv_idx]
+                    msg.start[orig_idx] = recv_msg.start[recv_idx]
+                    msg.id[orig_idx] = recv_msg.id[recv_idx]
+                    msg.interm.extend(recv_msg.interm)
+                msg.end.append([now])   
+                msg.interm.append([self.name])
+                #else: print("Received message is out of date.")
+            self.ready_msg_q.remove(recv_msg)
+        if not msg.src:
+            print("ERROR: all received message was not merged")
+            exit()
+        #self.ready_msg_q = []
+        return msg
 '''
 ##################
 ##For Test_Main##
@@ -221,8 +238,8 @@ task_graph = {
     'task_E': ['task_0']
 }
 
-msg1 = message(src = ['task_A', 'task_B', 'task_C'], interm=[], id = [1,1,1], start = [1,1,1], end = 1 )
-msg2 = message(src = ['task_A', 'task_C'], interm=[], id = [2,2], start = [2,2], end = 1 )
+msg1 = message(src = [['task_B']], interm=[['task_B']], id = [[0]], start = [[1]], end = [[1]] )
+msg2 = message(src = [['task_C']], interm=[['task_C']], id = [[0]], start = [[2]], end = [[1]] )
 ##################
 
 def Test_Main():
@@ -232,12 +249,15 @@ def Test_Main():
     taskD = SIMTSK('task_D', 5, task_graph, feature_set)
     taskE = SIMTSK('task_E', 10, task_graph, feature_set)
     
-    taskB.msg_q = [msg1, msg2]
-    taskC.msg_q = [msg1, msg2]
+    taskB.ready_msg_q = [msg1, msg2]
+    taskE.ready_msg_q = [msg1, msg2]
     #p = taskC.get_pred()
     #p = taskA.is_subgraph_src()
-    taskC.merge_msg(0)
-    print(p)
+    taskE.set_art(10)
+    msg = taskE.test_merge_msg(11)
+    print_message(msg)
+
+    #print(p)
    
 Test_Main()
 '''

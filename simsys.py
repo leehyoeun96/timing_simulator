@@ -167,16 +167,16 @@ class SIMSYS(object):
         term_task = self.tasks[term_task_name]
         successors = term_task.get_succ()
         msg = term_task.generate_msg(self.current_time + term_task.ret)
-        print("Generate message")
-        print_message(msg)
+        #print("Generate message")
+        #print_message(msg)
 
         for succ_name in successors:
             succ = self.tasks[succ_name]
             succ.insert_msg(msg)
 
         if term_task.is_sink():
-            print("Save message")
-            print_message(msg)
+            #print("Save message")
+            #print_message(msg)
             self.gathered_msg.append(msg)
 
     def gather_response_time(self):

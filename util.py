@@ -41,7 +41,10 @@ def print_message(msg):
     print("  msg ids:", msg.id)
     print("  start time:", msg.start)
     print("  end time:", msg.end)
-    print("  intermediates:", msg.interm)
+    '''
+    for idx, itm in enumerate(msg.interm):
+        print("  intermediates", idx, ":",itm)
+    '''
     print("----------------------------")
 
 def show_response_time(response_time):
@@ -62,16 +65,42 @@ def update_task_status(task_name, arrival_time, tasks, status):
     task.set_art(arrival_time)
     return task_name
 
+def show_e2el(msgs):
+    e2eL = {}
+    for msg in msgs:
+        for idx, src in enumerate(msg.src):
+            if src in e2eL.keys():
+                e2eL[src].append(msg.end-msg.start[idx])
+            else:
+                e2eL[src] = [msg.end-msg.start[idx]]
+    
+    for task, e2el in e2eL.items():
+        title = "End to end latency:"+task
+        print(title,e2el)
+    return e2eL
+
+def show_graph(e2eL_dict):
+    for task, e2el in e2eL_dict.items():
+        plt.clf()
+        alpha = 1
+        title = "End to end latency:"+task
+        plt.hist(e2el, align ='mid', bins=len(e2el), density=False)
+        plt.grid()					
+        plt.xlabel('execution time')
+        plt.ylabel('probability')
+        plt.title(title)
+        plt.show()
+
 def sampling_ext(table, name):
     ###
     ##Generate real number randomly.
     ##And lookup sampling table.
     ###
     if not name in table:
-        print("Define lookup table about", name)
+        print("Define ext_table about", name)
         exit()
-    if sum(table[name]) >1:
-        print(name, "'s total probaility is over 1")
+    if not sum(table[name])==1:
+        print(name, "'s total probaility is not 1")
         exit()
     ext_sample = 0
     real = random.random()

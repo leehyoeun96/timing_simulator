@@ -110,7 +110,7 @@ class SIMCPU(object):
                 next_evt_list.append((next_evt,run_task_name))
 
         if len(next_evt_list) == 0:
-            print("There's no next event: CPU",self.icpu)
+            #print("There's no next event: CPU",self.icpu)
             task = None
             #next_t = self.current_time #?
             next_t = math.inf #?
