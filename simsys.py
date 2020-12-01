@@ -1,4 +1,4 @@
-from util import *
+from simutil import *
 from simcpu import *
 from simtsk import *
 import math
@@ -66,6 +66,7 @@ class SIMSYS(object):
         min_time = math.inf #infinite number
         min_tasks = []
         evt_cpu = []
+        term_task_per_cpu = {}
         if not self.cpus:
             print("There's no running cpu")
             exit()
@@ -73,6 +74,8 @@ class SIMSYS(object):
         for cpu in self.cpus:
             term_flag, term_task_name = cpu.is_terminated()
             if term_flag: self.insert_ready_successors(term_task_name)
+
+        for cpu in self.cpus:
             next_evt = cpu.find_min_event_time()
 
             if not next_evt:
@@ -192,7 +195,7 @@ class SIMSYS(object):
                 if not list == []:
                     task_list[task] = list
 
-        return total_list#, task_list
+        return task_list #,total_list
 
     def create_task_set(self):
         ###

@@ -1,7 +1,7 @@
 from recordtype import recordtype
 import time
 import copy
-from util import *
+from simutil import *
 
 message = recordtype("message", 'src, interm, id, start, end')
 class SIMTSK(object):

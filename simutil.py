@@ -47,15 +47,16 @@ def print_message(msg):
     '''
     print("----------------------------")
 
-def show_response_time(response_time):
+def show_time_list(response_time):
     if len(response_time) == 0:
         print("ERROR: Response time was NOT SAVED")
         exit()
-    print(response_time)
+    for task, time in response_time.items():
+        print(task, time)
     #plt.hist(response_time, bins = len(response_time))
     #plt.show()
 
-def show_e2el(msgs):
+def get_e2el_from_msg(msgs):
     e2eL = {}
     for msg in msgs:
         for idx, src in enumerate(msg.src):
@@ -63,10 +64,10 @@ def show_e2el(msgs):
                 e2eL[src].append(msg.end-msg.start[idx])
             else:
                 e2eL[src] = [msg.end-msg.start[idx]]
-    
+    '''
     for task, e2el in e2eL.items():
-        title = "End to end latency:"+task
-        print(title,e2el)
+        print(task,e2el)
+    '''
     return e2eL
 
 def show_graph(e2eL_dict):
@@ -81,9 +82,29 @@ def show_graph(e2eL_dict):
         plt.title(title)
         plt.show()
 
+def show_multi_cdf(title, dists):
+        if len(dists) <= 1: return False
+        alpha = 1
+        color_list = ['b', 'r', 'g']
+        for task, dist in dists.items():
+            #Plotting analyzation result.
+            idx = 0
+            plt.plot(range(len(dist[idx])), dist[idx], color=color_list[idx%len(color_list)], alpha=alpha, label=task+" "+'analyzation')
+            #Plotting simulation result.
+            idx = 1
+            plt.plot(range(len(dist[idx])), dist[idx], color=color_list[idx%len(color_list)], alpha=alpha, label=task+" "+'simulation')
+
+            plt.grid()					
+            plt.legend(loc="lower right")
+            plt.xlabel('time')
+            plt.ylabel('CDF')
+            plt.title(title)
+            plt.show()
+            plt.clf()
 ###########################################
 # utilities for task processing
 ############################################
+
 def update_task_status(task_name, arrival_time, tasks, status):
     task = tasks[task_name]
     task.set_stt(status)
