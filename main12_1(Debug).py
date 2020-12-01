@@ -5,33 +5,32 @@ import simutil as util
 
 task_feat = recordtype("task_feat", 'prd, off, aff')
 
-
-task_feat = recordtype("task_feat", 'prd, off, aff')
-
 max_time = 100
 
 task_graph = {
     'task_0': ['task_A', 'task_B'],
-    'task_A': ['task_C'],
-    'task_B': ['task_C'],
-    'task_C': ['task_0'],
+    'task_A': ['task_D'],
+    'task_B': ['task_E'],
+    'task_C': ['task_F'],
+    'task_D': ['task_F'],
+    'task_E': ['task_F'],
+    'task_F': ['task_0'],
 }
 feature_set = {
-    'task_A': task_feat(prd=50, off=0, aff=0),
-    'task_B': task_feat(prd=50,  off=0, aff=1),
-    'task_C': task_feat(prd=50,  off=0, aff=0),
+    'task_A': task_feat(prd=30, off=0, aff=0),
+    'task_B': task_feat(prd=30, off=0, aff=1),
+    'task_C': task_feat(prd=30, off=0, aff=0),
+    'task_D': task_feat(prd=30, off=0, aff=1),
+    'task_E': task_feat(prd=30, off=0, aff=1),
+    'task_F': task_feat(prd=30, off=0, aff=2),
 }
-'''
 ext_table = {
-    'task_A': [0, 0.25, 0.25, 0.25, 0.25],
-    'task_B': [0, 0.2, 0.2, 0.2, 0.2, 0.2],
-    'task_C': [0, 0.15, 0.35, 0.25, 0.25],
-}
-'''
-ext_table = {
-    'task_A': [0, 0, 0, 0, 1],
-    'task_B': [0, 0, 0, 0, 0, 1],
-    'task_C': [0, 0, 0, 0, 1],
+    'task_A': [0, 0, 1],
+    'task_B': [0, 1],
+    'task_C': [0, 0, 0.5, 0.5],
+    'task_D': [0, 0, 1],
+    'task_E': [0, 0, 1],
+    'task_F': [0, 0.2, 0.2, 0.2, 0.2, 0.2],
 }
 
 def sys_simulation():
@@ -42,22 +41,24 @@ def sys_simulation():
         #print("...........................")
         cpu_list, next_time, next_tasks = simsys.find_min_event_time()
         simsys.update_system_status(cpu_list, next_time, next_tasks)
-        '''
+        
         for cpu_idx in cpu_list:
             simsys.cpus[cpu_idx].print_status("")
         #input()
-        '''
+        
+        
     return simsys.gathered_rtl, simsys.gathered_msg
 
 response_time_list, e2eL_msgs = sys_simulation()
-
 print("*Final response time")
 util.show_time_list(response_time_list)
+for task, time_list in response_time_list.items():
+    print("Max",task,max(time_list))
 print()
-
+'''
 print("*Final e2e latency")
 for msg in e2eL_msgs: print_message(msg)
 print()
-e2e_dict = util.get_e2el_from_msg(e2eL_msgs)
-print(e2e_dict)
+e2e_dict = util.show_e2el(e2eL_msgs)
+'''
 #util.show_graph(e2e_dict)

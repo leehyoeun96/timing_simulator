@@ -117,7 +117,6 @@ class SIMCPU(object):
             min_evt = (next_t, task)
             #exit()
         else: min_evt = min(next_evt_list)
-        print("??",next_evt_list)
         '''
         min_time = min(next_evts.keys())
         min_task = next_evts[min_time]
